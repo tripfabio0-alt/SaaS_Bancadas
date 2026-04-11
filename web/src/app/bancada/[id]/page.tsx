@@ -1,17 +1,43 @@
 "use client";
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Database, Search, Filter, Download, ArrowLeft, MoreVertical, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const TABS = ['Data', 'Full Data'];
 
 export default function BenchDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('Data');
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const tableName = activeTab === 'Data' ? 'data' : 'full_data';
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('bancada_id', id)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      setData(result || []);
+    } catch (err) {
+      console.error('Erro ao buscar detalhes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [id, activeTab]);
 
   return (
     <div className="space-y-8 pb-20">
@@ -85,26 +111,26 @@ export default function BenchDetail() {
           <thead className="border-b border-white/5">
             <tr>
               <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">ID Mark</th>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Timestamp</th>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Parameter A</th>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Parameter B</th>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Status</th>
+              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Meter Number</th>
+              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Error conclusion</th>
+              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Save time</th>
+              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Sync Status</th>
               <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {[...Array(10)].map((_, i) => (
-              <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
+            {data.map((item: any, i: number) => (
+              <tr key={item.id || i} className="hover:bg-white/[0.01] transition-colors group">
                 <td className="px-6 py-5">
-                  <span className="font-mono text-blue-400">MK-29{i}-X90</span>
+                  <span className="font-mono text-blue-400">{item['ID Mark']}</span>
                 </td>
-                <td className="px-6 py-5 text-white/60 text-sm italic">2026-04-10 10:4{i}:12</td>
-                <td className="px-6 py-5 font-semibold">124.5 m³</td>
-                <td className="px-6 py-5 font-semibold">0.05 bar</td>
+                <td className="px-6 py-5 text-white/60 font-semibold">{item['Meter Number']}</td>
+                <td className="px-6 py-5 font-semibold">{item['Error conclusion']}</td>
+                <td className="px-6 py-5 text-white/40 text-sm italic">{item['Save time']}</td>
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span className="text-xs font-medium text-white/60">Processed</span>
+                    <span className="text-xs font-medium text-white/60">Synced</span>
                   </div>
                 </td>
                 <td className="px-6 py-5">

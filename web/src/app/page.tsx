@@ -2,23 +2,81 @@
 
 import { Activity, Clock, Database, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const STATS = [
-  { label: 'Active Benches', value: '5/5', icon: Activity, color: 'text-green-400' },
-  { label: 'Total Records', value: '124,502', icon: Database, color: 'text-blue-400' },
-  { label: 'Last Sync', value: '2 mins ago', icon: Clock, color: 'text-purple-400' },
-  { label: 'Health Status', value: 'Optimal', icon: CheckCircle2, color: 'text-emerald-400' },
-];
-
-const BANCADAS = [
-  { id: 1, name: 'Bancada 1', location: 'Laboratório Gas', status: 'Online', records: '24k', lastUpdate: '10:45 AM' },
-  { id: 2, name: 'Bancada 2', location: 'Small Flow - D', status: 'Online', records: '18k', lastUpdate: '10:42 AM' },
-  { id: 3, name: 'Bancada 3', location: 'Small Flow - C', status: 'Online', records: '31k', lastUpdate: '10:39 AM' },
-  { id: 4, name: 'Bancada 4', location: 'Small Flow - E', status: 'Online', records: '12k', lastUpdate: '10:41 AM' },
-  { id: 5, name: 'Bancada 5', location: 'Bancada Gas 4', status: 'Online', records: '39k', lastUpdate: '10:44 AM' },
-];
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
+  const [stats, setStats] = useState([
+    { label: 'Active Benches', value: '5/5', icon: Activity, color: 'text-green-400' },
+    { label: 'Total Records', value: '...', icon: Database, color: 'text-blue-400' },
+    { label: 'Last Sync', value: '...', icon: Clock, color: 'text-purple-400' },
+    { label: 'Health Status', value: 'Optimal', icon: CheckCircle2, color: 'text-emerald-400' },
+  ]);
+
+  const [bancadas, setBancadas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data, error } = await supabase
+          .from('data')
+          .select('*')
+          .order('timestamp', { ascending: false });
+
+        if (error) throw error;
+
+        // Agrupar por bancada_id para mostrar o status mais recente de cada uma
+        const latestByBench: Record<number, any> = {};
+        data.forEach(item => {
+          if (!latestByBench[item.bancada_id]) {
+            latestByBench[item.bancada_id] = item;
+          }
+        });
+
+        const benchList = [1, 2, 3, 4, 5].map(id => {
+          const latest = latestByBench[id];
+          return {
+            id,
+            name: `Bancada ${id}`,
+            location: 'Industrial Site',
+            status: latest ? 'Online' : 'Offline',
+            records: data.filter(d => d.bancada_id === id).length,
+            lastUpdate: latest ? new Date(latest.timestamp).toLocaleTimeString() : 'N/A'
+          };
+        });
+
+        setBancadas(benchList as any);
+        
+        // Atualizar Stats
+        setStats(prev => [
+          prev[0],
+          { ...prev[1], value: data.length.toLocaleString() },
+          { ...prev[2], value: data[0] ? new Date(data[0].timestamp).toLocaleTimeString() : 'N/A' },
+          prev[3]
+        ] as any);
+
+      } catch (err) {
+        console.error('Erro ao buscar dados:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+    
+    // Inscrever em mudanças em tempo real
+    const channel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'data' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <div className="space-y-10">
       <header>
@@ -28,7 +86,7 @@ export default function Home() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {STATS.map((stat, i) => (
+        {stats.map((stat: any, i: number) => (
           <motion.div 
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
@@ -60,15 +118,15 @@ export default function Home() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Bench Name</th>
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Location</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Meter Number</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Error conclusion</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Save time</th>
                 <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Records</th>
                 <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Last Update</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {BANCADAS.map((bench, i) => (
+              {bancadas.map((bench: any, i: number) => (
                 <motion.tr 
                   key={bench.id}
                   initial={{ opacity: 0 }}
