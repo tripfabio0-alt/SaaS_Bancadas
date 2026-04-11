@@ -118,10 +118,10 @@ export default function Home() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Meter Number</th>
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Error conclusion</th>
-                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Save time</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Bench Name</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Location</th>
                 <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Total Records</th>
                 <th className="px-6 py-4 text-xs font-bold text-white/30 uppercase tracking-widest">Last Update</th>
               </tr>
             </thead>

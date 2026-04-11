@@ -23,7 +23,7 @@ export default function BenchDetail() {
       const { data: result, error } = await supabase
         .from(tableName)
         .select('*')
-        .eq('bancada_id', id)
+        .eq('bancada_id', Number(id))
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
@@ -56,8 +56,12 @@ export default function BenchDetail() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/80 hover:bg-white/10 transition-all text-sm font-medium">
-            <RefreshCw size={14} /> Sync Now
+          <button 
+            onClick={() => fetchData()}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/80 hover:bg-white/10 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={14} className={cn(loading && "animate-spin")} /> {loading ? 'Syncing...' : 'Sync Now'}
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/80 hover:bg-white/10 transition-all text-sm font-medium">
             <Download size={14} /> Export CSV
@@ -119,31 +123,50 @@ export default function BenchDetail() {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {data.map((item: any, i: number) => (
-              <tr key={item.id || i} className="hover:bg-white/[0.01] transition-colors group">
-                <td className="px-6 py-5">
-                  <span className="font-mono text-blue-400">{item['ID Mark']}</span>
-                </td>
-                <td className="px-6 py-5 text-white/60 font-semibold">{item['Meter Number']}</td>
-                <td className="px-6 py-5 font-semibold">{item['Error conclusion']}</td>
-                <td className="px-6 py-5 text-white/40 text-sm italic">{item['Save time']}</td>
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span className="text-xs font-medium text-white/60">Synced</span>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-20 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <RefreshCw size={24} className="text-blue-500 animate-spin" />
+                    <p className="text-white/20 text-sm">Loading records from bench {id}...</p>
                   </div>
                 </td>
-                <td className="px-6 py-5">
-                  <button className="text-xs font-bold text-white/20 group-hover:text-white/60 hover:!text-white transition-all underline decoration-white/0 underline-offset-4 hover:decoration-white/10">DETAILS</button>
+              </tr>
+            ) : data.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-20 text-center text-white/20">
+                  No records found for this bench.
                 </td>
               </tr>
-            ))}
+            ) : (
+              data.map((item: any, i: number) => (
+                <tr key={item.id || i} className="hover:bg-white/[0.01] transition-colors group">
+                  <td className="px-6 py-5">
+                    <span className="font-mono text-blue-400">{item['ID Mark']}</span>
+                  </td>
+                  <td className="px-6 py-5 text-white/60 font-semibold">{item['Meter Number']}</td>
+                  <td className="px-6 py-5 font-semibold">{item['Error conclusion']}</td>
+                  <td className="px-6 py-5 text-white/40 text-sm italic">{item['Save time']}</td>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      <span className="text-xs font-medium text-white/60">Synced</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <button className="text-xs font-bold text-white/20 group-hover:text-white/60 hover:!text-white transition-all underline decoration-white/0 underline-offset-4 hover:decoration-white/10">DETAILS</button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
 
         {/* Empty State / Pagination placeholder */}
         <div className="p-6 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
-          <p className="text-sm text-white/20">Showing 10 of 124,502 entries</p>
+          <p className="text-sm text-white/20">
+            {loading ? 'Calculating...' : `Showing ${data.length} entries for this bench`}
+          </p>
           <div className="flex gap-2">
             <button disabled className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-white/20 text-sm cursor-not-allowed">Previous</button>
             <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all text-sm">Next</button>
