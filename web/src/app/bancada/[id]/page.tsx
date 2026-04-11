@@ -20,11 +20,14 @@ export default function BenchDetail() {
     setLoading(true);
     try {
       const tableName = activeTab === 'Data' ? 'data' : 'full_data';
+      console.log(`[DEBUG] Buscando da tabela ${tableName} para bancada ID: ${id}`);
       const { data: result, error } = await supabase
         .from(tableName)
         .select('*')
         .eq('bancada_id', Number(id))
         .order('timestamp', { ascending: false });
+      
+      console.log(`[DEBUG] Resultado recebido: ${result?.length || 0} registros`);
 
       if (error) throw error;
       setData(result || []);
@@ -142,11 +145,19 @@ export default function BenchDetail() {
               data.map((item: any, i: number) => (
                 <tr key={item.id || i} className="hover:bg-white/[0.01] transition-colors group">
                   <td className="px-6 py-5">
-                    <span className="font-mono text-blue-400">{item['ID Mark']}</span>
+                    <span className="font-mono text-blue-400">
+                      {item['ID Mark'] || item['id_mark'] || item['id mark'] || '-'}
+                    </span>
                   </td>
-                  <td className="px-6 py-5 text-white/60 font-semibold">{item['Meter Number']}</td>
-                  <td className="px-6 py-5 font-semibold">{item['Error conclusion']}</td>
-                  <td className="px-6 py-5 text-white/40 text-sm italic">{item['Save time']}</td>
+                  <td className="px-6 py-5 text-white/60 font-semibold">
+                    {item['Meter Number'] || item['meter_number'] || item['meter number'] || '-'}
+                  </td>
+                  <td className="px-6 py-5 font-semibold">
+                    {item['Error conclusion'] || item['error_conclusion'] || item['error conclusion'] || '-'}
+                  </td>
+                  <td className="px-6 py-5 text-white/40 text-sm italic">
+                    {item['Save time'] || item['save_time'] || item['save time'] || '-'}
+                  </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />

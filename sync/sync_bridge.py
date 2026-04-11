@@ -1,119 +1,142 @@
-# SaaS Bancadas Sync Bridge - Dynamic Sincronização
-# Script para monitorar bancos de dados Microsoft Access e sincronizar com Supabase
-
-import os
 import pyodbc
 import pandas as pd
-from supabase import create_client, Client
+import os
+import json
+from datetime import datetime
+from supabase import create_client
 from dotenv import load_dotenv
 import time
-import sys
-from datetime import datetime
 
-# Load environment variables
+# Carregar variáveis de ambiente
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: SUPABASE_URL and SUPABASE_KEY must be set in .env")
-    sys.exit(1)
+    print("Erro: SUPABASE_URL ou SUPABASE_KEY não configurados!")
+    exit(1)
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Monitoramento de 5 Bancadas
-# Cada bancada possui dois arquivos principais: Data.accdb e Full Data.accdb
-BANCADAS = []
-root_path = r"C:\Users\User\Documents\BD"
-for i in range(1, 6):
-    bench_dir = os.path.join(root_path, f"database{i}")
-    BANCADAS.append({
-        "id": i,
-        "files": {
-            "data": os.path.join(bench_dir, "Data.accdb"),
-            "full_data": os.path.join(bench_dir, "Full Data.accdb")
-        }
-    })
-
-def get_access_connection(db_path):
-    if not os.path.exists(db_path):
-        return None
+def map_columns(df, is_full_data=False):
+    """Mapeia colunas do Access para o padrão do Supabase de forma flexível."""
     
-    conn_str = (
-        r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
-        r'DBQ=' + db_path + ';'
-    )
-    try:
-        return pyodbc.connect(conn_str)
-    except Exception as e:
-        print(f"Error connecting to {os.path.basename(db_path)}: {e}")
-        return None
+    # Mapeamento de variações de nomes
+    mapping = {
+        'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'id mark', 'id_mark', 'Mark', 'NO', 'ID'],
+        'Meter Number': ['Meter Number', 'Meter_Number', 'MeterNumber', 'meter number', 'Medidor', 'Serial'],
+        'Error conclusion': ['Error conclusion', 'Error_conclusion', 'ErrorConclusion', 'error conclusion', 'Conclusão', 'Resultado'],
+        'Save time': ['Save time', 'Save_time', 'SaveTime', 'save time', 'Data', 'Hora', 'Timestamp']
+    }
+    
+    final_mapping = {}
+    cols_lower = {col.lower().replace('_', ' ').replace('  ', ' '): col for col in df.columns}
+    
+    for target, variations in mapping.items():
+        # Se for Full Data, só nos interessa o ID Mark para o vínculo
+        if is_full_data and target != 'ID Mark':
+            continue
+            
+        found = False
+        target_norm = target.lower()
+        
+        if target_norm in cols_lower:
+            final_mapping[cols_lower[target_norm]] = target
+            found = True
+        
+        if not found:
+            for variant in variations:
+                variant_norm = variant.lower().replace('_', ' ')
+                if variant_norm in cols_lower:
+                    final_mapping[cols_lower[variant_norm]] = target
+                    found = True
+                    break
+    
+    if final_mapping:
+        df = df.rename(columns=final_mapping)
+    
+    if is_full_data:
+        # Para Full Data, se achamos o ID Mark, o resto vai para JSON
+        if 'ID Mark' in df.columns:
+            # Manter apenas ID Mark e criar raw_payload com o resto
+            other_cols = [c for c in df.columns if c != 'ID Mark']
+            df['raw_payload'] = df[other_cols].apply(lambda x: x.to_json(), axis=1)
+            return df[['ID Mark', 'raw_payload']]
+        return None # Falha se não achar o ID Mark no full data
+    else:
+        # Para Data normal, garantir as 4 colunas
+        required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time']
+        for col in required:
+            if col not in df.columns:
+                df[col] = None
+        return df[required]
 
-def get_table_names(conn):
-    """Retorna todos os nomes de tabelas que não são do sistema (MSys)"""
-    cursor = conn.cursor()
-    tables = [t.table_name for t in cursor.tables(tableType='TABLE') if not t.table_name.startswith('MSys')]
-    return tables
-
-def sync_file(bancada_id, target_supabase_table, db_path):
-    conn = get_access_connection(db_path)
-    if not conn:
+def sync_file(db_path, bancada_id):
+    if not os.path.exists(db_path):
         return
 
+    is_full_data_file = "Full Data" in db_path
+    target_supabase_table = "full_data" if is_full_data_file else "data"
+    
+    conn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + db_path + ';'
+    
     try:
-        tables = get_table_names(conn)
-        if not tables:
-            print(f"   [Bancada {bancada_id}] Nenhum dado encontrado em {os.path.basename(db_path)}")
-            return
-
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        tables = [t.table_name for t in cursor.tables(tableType='TABLE') if not t.table_name.startswith('MSys')]
+        
         for table_name in tables:
             try:
-                # Ler a tabela do Access
                 query = f"SELECT * FROM [{table_name}]"
                 df = pd.read_sql(query, conn)
-                
-                if df.empty:
-                    continue
+                if df.empty: continue
 
-                # Adicionar metadados
+                # --- TRATAMENTO ---
+                df = map_columns(df, is_full_data=is_full_data_file)
+                if df is None or 'ID Mark' not in df.columns: continue
+
+                # Limpeza e Metadados
+                df = df.where(pd.notnull(df), None)
                 df['bancada_id'] = bancada_id
                 df['sync_at'] = datetime.now().isoformat()
+                df = df[df['ID Mark'].notnull()]
                 
-                # Converter para lista de dicionários
+                if df.empty: continue
+                
                 records = df.to_dict('records')
-                
-                # Upsert no Supabase
-                # Usamos 'ID Mark' como chave única para evitar duplicados
-                print(f"   [Bancada {bancada_id}] Sincronizando {len(records)} registros da tabela {table_name} -> {target_supabase_table}...")
+                print(f"   [Bancada {bancada_id}] Sincronizando {len(records)} registros da {table_name} -> {target_supabase_table}...")
                 supabase.table(target_supabase_table).upsert(records, on_conflict='ID Mark').execute()
                 
             except Exception as table_err:
-                print(f"   [!] Erro na tabela {table_name}: {table_err}")
+                pass # Erros silenciosos para não travar o loop de tabelas
 
-    except Exception as e:
-        print(f"   [!] Erro ao processar arquivo {os.path.basename(db_path)}: {e}")
-    finally:
         conn.close()
+    except Exception as e:
+        print(f"   [!] Erro no arquivo {os.path.basename(db_path)}: {e}")
 
 def main():
-    print(f"{'='*50}")
-    print(f"Bancadas Sync Bridge Iniciada em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-    print(f"{'='*50}")
+    print("==================================================")
+    print("Bancadas Sync Bridge (Versão Full Data JSON) Iniciada")
+    print("==================================================")
     
+    bancadas = {
+        1: os.getenv("BD1_PATH", r"C:\Users\User\Documents\BD\database1\Data.accdb"),
+        2: os.getenv("BD2_PATH", r"C:\Users\User\Documents\BD\database2\Data.accdb"),
+        3: os.getenv("BD3_PATH", r"C:\Users\User\Documents\BD\database3\Data.accdb"),
+        4: os.getenv("BD4_PATH", r"C:\Users\User\Documents\BD\database4\Data.accdb"),
+        5: os.getenv("BD5_PATH", r"C:\Users\User\Documents\BD\database5\Data.accdb")
+    }
+
     while True:
-        for bancada in BANCADAS:
-            print(f"\n>>> Processando Bancada {bancada['id']}...")
-            
-            # 1. Sincronizar Arquivo Data.accdb -> tabela 'data' no Supabase
-            sync_file(bancada["id"], "data", bancada["files"]["data"])
-            
-            # 2. Sincronizar Arquivo Full Data.accdb -> tabela 'full_data' no Supabase
-            sync_file(bancada["id"], "full_data", bancada["files"]["full_data"])
-            
-        print(f"\n{'*'*50}")
-        print(f"Ciclo de sincronização finalizado. Próximo em 5 minutos.")
-        print(f"{'*'*50}")
+        for b_id, path in bancadas.items():
+            print(f"Processando Bancada {b_id}...")
+            sync_file(path, b_id)
+            full_data_path = path.replace("Data.accdb", "Full Data.accdb")
+            if os.path.exists(full_data_path):
+                sync_file(full_data_path, b_id)
+
+        print("\nPróximo ciclo em 5 minutos...")
         time.sleep(300)
 
 if __name__ == "__main__":
