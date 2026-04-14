@@ -15,6 +15,7 @@ type BenchStatus = 'Online' | 'Idle' | 'Offline';
 
 function getBenchStatus(lastSyncAt: string | null): BenchStatus {
   if (!lastSyncAt) return 'Offline';
+  // Comparar sync_at (quando foi sincronizado) e NÃO o timestamp original do dado
   const diffMinutes = (Date.now() - new Date(lastSyncAt).getTime()) / (1000 * 60);
   if (diffMinutes < 15) return 'Online';
   if (diffMinutes < 120) return 'Idle';
@@ -82,12 +83,12 @@ export default function BenchDetail() {
           .eq('bancada_id', Number(id))
           .order(orderColumn, { ascending: false })
           .range(from, to),
-        // Para o status, só precisamos do registro mais recente da tabela 'data'
+        // Para o status, buscar sync_at mais recente (não o timestamp do dado)
         supabase
           .from('data')
-          .select('timestamp')
+          .select('sync_at')
           .eq('bancada_id', Number(id))
-          .order('timestamp', { ascending: false })
+          .order('sync_at', { ascending: false })
           .limit(1),
       ]);
 
@@ -100,7 +101,7 @@ export default function BenchDetail() {
       setTotalCount(count || 0);
 
       const latest = statusRes.data?.[0];
-      setBenchStatus(getBenchStatus(latest?.timestamp ?? null));
+      setBenchStatus(getBenchStatus(latest?.sync_at ?? null));
     } catch (err: any) {
       console.error('Erro ao buscar detalhes:', err);
       setData([]);

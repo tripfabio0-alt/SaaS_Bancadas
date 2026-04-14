@@ -92,9 +92,9 @@ export default function Home() {
           try {
             const { data: latestData } = await supabase
               .from('data')
-              .select('*')
+              .select('sync_at, bancada_id')
               .eq('bancada_id', id)
-              .order('timestamp', { ascending: false })
+              .order('sync_at', { ascending: false })
               .limit(1);
 
             const { count: benchCount } = await supabase
@@ -109,7 +109,7 @@ export default function Home() {
               location: 'Industrial Site',
               status: latest ? 'Online' : 'Offline',
               records: benchCount || 0,
-              lastUpdate: latest ? new Date(latest.timestamp).toLocaleTimeString() : 'N/A',
+              lastUpdate: latest ? new Date(latest.sync_at).toLocaleTimeString() : 'N/A',
               latestRecord: latest,
             };
           } catch {
@@ -122,7 +122,8 @@ export default function Home() {
 
         const processedBenches = benchList.map(bench => {
           if (!bench.latestRecord) return { ...bench, status: 'Offline', statusColor: 'bg-red-500' };
-          const diff = (now.getTime() - new Date(bench.latestRecord.timestamp).getTime()) / (1000 * 60);
+          // Usar sync_at (momento da sincronização) e NÃO timestamp (data original do dado no Access)
+          const diff = (now.getTime() - new Date(bench.latestRecord.sync_at).getTime()) / (1000 * 60);
           if (diff < 15) return { ...bench, status: 'Online', statusColor: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' };
           if (diff < 120) return { ...bench, status: 'Idle', statusColor: 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]' };
           return { ...bench, status: 'Offline', statusColor: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' };
@@ -132,14 +133,14 @@ export default function Home() {
 
         const lastGlobalSync = benchList
           .filter(b => b.latestRecord)
-          .sort((a, b) => new Date(b.latestRecord.timestamp).getTime() - new Date(a.latestRecord.timestamp).getTime())[0];
+          .sort((a, b) => new Date(b.latestRecord?.sync_at ?? 0).getTime() - new Date(a.latestRecord?.sync_at ?? 0).getTime())[0];
 
         const activeCount = processedBenches.filter(b => b.status === 'Online').length;
 
         setStats(prev => [
           { ...prev[0], value: `${activeCount}/5` },
           { ...prev[1], value: (totalCount || 0).toLocaleString() },
-          { ...prev[2], value: lastGlobalSync ? new Date(lastGlobalSync.latestRecord.timestamp).toLocaleTimeString() : 'N/A' },
+          { ...prev[2], value: lastGlobalSync ? new Date(lastGlobalSync.latestRecord?.sync_at ?? 0).toLocaleTimeString() : 'N/A' },
           { ...prev[3], value: activeCount > 0 ? 'Optimal' : 'Checking' },
         ] as any);
       } catch (err) {

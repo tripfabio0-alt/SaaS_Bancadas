@@ -100,17 +100,17 @@ export function useNotifications() {
     const checkStatuses = async () => {
       const { data } = await supabase
         .from('data')
-        .select('bancada_id, timestamp')
+        .select('bancada_id, sync_at')
         .in('bancada_id', [1, 2, 3, 4, 5])
-        .order('timestamp', { ascending: false });
+        .order('sync_at', { ascending: false });
 
       if (!data) return;
 
-      // Pegar o registro mais recente por bancada
+      // Pegar o sync_at mais recente por bancada
       const latestByBancada: Record<number, string> = {};
       for (const row of data) {
         if (!latestByBancada[row.bancada_id]) {
-          latestByBancada[row.bancada_id] = row.timestamp;
+          latestByBancada[row.bancada_id] = row.sync_at;
         }
       }
 
@@ -122,6 +122,7 @@ export function useNotifications() {
         if (!ts) {
           status = 'offline';
         } else {
+          // Usar sync_at para determinar status
           const diff = (now - new Date(ts).getTime()) / (1000 * 60);
           status = diff < 15 ? 'online' : diff < 120 ? 'idle' : 'offline';
         }

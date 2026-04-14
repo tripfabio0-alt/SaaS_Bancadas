@@ -8,7 +8,7 @@ const BANCADAS = [1, 2, 3, 4, 5];
 
 const defaultPaths = BANCADAS.reduce((acc, id) => ({
   ...acc,
-  [id]: `C:\\Users\\User\\Documents\\BD\\database${id}\\Data.accdb`
+  [id]: `C:\\Users\\User\\Documents\\BD\\database${id}\\Full Data.accdb`
 }), {} as Record<number, string>);
 
 export default function SettingsPage() {

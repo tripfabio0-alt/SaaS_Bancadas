@@ -1,7 +1,6 @@
 import pyodbc
 import pandas as pd
 import os
-import json
 from datetime import datetime
 from supabase import create_client
 from dotenv import load_dotenv
@@ -14,6 +13,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
+    print("[ERRO] Variáveis SUPABASE_URL e SUPABASE_KEY não encontradas no .env")
     exit(1)
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -29,11 +29,9 @@ def map_columns(df, is_full_data=False):
     }
     
     final_mapping = {}
-    # Normalização de nomes de colunas (lowercase, trim, remove underscores)
     cols_map = {col.lower().strip().replace('_', ' ').replace('  ', ' '): col for col in df.columns}
     
     for target, variations in mapping.items():
-        # Para Full Data, só precisamos do ID Mark como chave de mapeamento se for usar como PK
         if is_full_data and target != 'ID Mark':
             continue
             
@@ -55,7 +53,6 @@ def map_columns(df, is_full_data=False):
     if final_mapping:
         df = df.rename(columns=final_mapping)
     
-    # Garantir que as colunas obrigatórias existam
     if is_full_data:
         required = ['ID Mark']
     else:
@@ -66,18 +63,15 @@ def map_columns(df, is_full_data=False):
             df[col] = "N/A"
 
     if is_full_data:
-        # Full Data -> JSON Payload (como dicionário para o Supabase tratar como JSONB)
         other_cols = [c for c in df.columns if c != 'ID Mark']
-        # Convertemos para dicionário linha por linha
         df['raw_payload'] = df[other_cols].apply(lambda x: x.to_dict(), axis=1)
-        # Retornar APENAS o que o Supabase aceita na tabela full_data
         return df[['ID Mark', 'raw_payload']].copy()
     else:
-        # Data -> Apenas colunas conhecidas
         return df[required].copy()
 
 def sync_file(db_path, bancada_id):
     if not os.path.exists(db_path):
+        print(f"   [!] Arquivo não encontrado: {db_path}")
         return
 
     is_full_data_file = "Full Data" in db_path
@@ -94,98 +88,125 @@ def sync_file(db_path, bancada_id):
             try:
                 query = f"SELECT * FROM [{table_name}]"
                 df = pd.read_sql(query, conn)
-                if df.empty: continue
+                if df.empty:
+                    print(f"   [INFO] Tabela '{table_name}' vazia, pulando.")
+                    continue
 
                 df = map_columns(df, is_full_data=is_full_data_file)
-                if df is None or 'ID Mark' not in df.columns: continue
+                if df is None or 'ID Mark' not in df.columns:
+                    print(f"   [!] Coluna 'ID Mark' não encontrada em '{table_name}'.")
+                    continue
 
-                # Limpeza final e adição de metadados
                 df = df.where(pd.notnull(df), None)
                 df['bancada_id'] = int(bancada_id)
+                # sync_at = momento ATUAL da sincronização (usado para status Online/Idle/Offline)
                 df['sync_at'] = datetime.now().isoformat()
                 
-                # Para a tabela 'data', tentamos converter o 'Save time' em 'timestamp'
+                # Para a tabela 'data', converte 'Save time' -> 'timestamp'
                 if not is_full_data_file and 'Save time' in df.columns:
                     try:
                         df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S')
-                    except:
-                        pass
+                    except Exception:
+                        df['timestamp'] = df['sync_at']  # Fallback para sync_at se conversão falhar
 
                 df = df[df['ID Mark'].notnull()]
-                if df.empty: continue
+                if df.empty:
+                    continue
                 
-                # Garantir que enviamos APENAS as colunas que existem no Supabase (Filtragem Estrita)
-                allowed_columns = ['ID Mark', 'bancada_id', 'sync_at']
+                # ── COMPOSITE ID (FIX CRÍTICO) ──────────────────────────────────────
+                # Garante unicidade POR BANCADA: bancadas diferentes podem ter o mesmo
+                # ID Mark sem se sobrescreverem no Supabase.
+                df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['ID Mark'].astype(str)
+                
+                # Filtragem estrita — apenas colunas definidas no schema do Supabase
+                allowed_columns = ['composite_id', 'ID Mark', 'bancada_id', 'sync_at']
                 if is_full_data_file:
                     allowed_columns += ['raw_payload']
                 else:
                     allowed_columns += ['Meter Number', 'Error conclusion', 'Save time', 'timestamp']
                 
-                # Filtragem final do DataFrame para remover qualquer coluna extra do Access
                 df_final = df[[c for c in allowed_columns if c in df.columns]].copy()
-                
                 records = df_final.to_dict('records')
                 
-                # DEBUG: Mostrar colunas do primeiro registro antes de enviar
                 if records:
-                    print(f"   [Bancada {bancada_id}] Enviando para {target_supabase_table}. Colunas: {list(records[0].keys())}")
+                    print(f"   [Bancada {bancada_id}] Tabela '{table_name}' -> {target_supabase_table}. "
+                          f"Colunas: {list(records[0].keys())} | Registros: {len(records)}")
                 
-                # Chunking para evitar erro de payload muito grande
-                chunk_size = 300 # Reduzido para maior estabilidade
+                # Chunking em lotes de 300
+                chunk_size = 300
                 total_chunks = (len(records) + chunk_size - 1) // chunk_size
                 
                 for i in range(0, len(records), chunk_size):
                     chunk = records[i:i + chunk_size]
                     current_chunk_idx = (i // chunk_size) + 1
-                    if total_chunks > 1 and current_chunk_idx % 5 == 0: # Logar a cada 5 lotes para não poluir
+                    if total_chunks > 1 and current_chunk_idx % 5 == 0:
                         print(f"      - Progresso: {current_chunk_idx}/{total_chunks}...")
-                        
-                    result = supabase.table(target_supabase_table).upsert(chunk, on_conflict='ID Mark').execute()
+                    
+                    # upsert usa composite_id como chave única — garante isolamento por bancada
+                    supabase.table(target_supabase_table).upsert(
+                        chunk, on_conflict='composite_id'
+                    ).execute()
                     
                 print(f"   [OK] Sincronizado: {target_supabase_table} ({len(records)} registros)")
                 
             except Exception as e:
                 print(f"   [!] Erro na tabela {table_name}: {e}")
-                with open("sync/sync_log.txt", "a") as f:
-                    f.write(f"{datetime.now()} - Erro na tabela {table_name}: {e}\n")
+                log_path = os.path.join(os.path.dirname(__file__), "sync_log.txt")
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(f"{datetime.now()} - [Bancada {bancada_id}] Erro na tabela {table_name}: {e}\n")
 
         conn.close()
     except Exception as e:
         print(f"   [!] Erro crítico no banco {db_path}: {e}")
 
 def main():
-    print("Sincronizador SaaS Bancadas V4 (Estabilizado) Ativo")
+    print("=" * 60)
+    print("  Sincronizador SaaS Bancadas V5 (Composite ID)")
+    print("=" * 60)
     
     bancadas = {
-        1: os.getenv("BD1_PATH", r"C:\Users\User\Documents\BD\database1\Data.accdb"),
-        2: os.getenv("BD2_PATH", r"C:\Users\User\Documents\BD\database2\Data.accdb"),
-        3: os.getenv("BD3_PATH", r"C:\Users\User\Documents\BD\database3\Data.accdb"),
-        4: os.getenv("BD4_PATH", r"C:\Users\User\Documents\BD\database4\Data.accdb"),
-        5: os.getenv("BD5_PATH", r"C:\Users\User\Documents\BD\database5\Data.accdb")
+        1: os.getenv("BD1_PATH", r"C:\Users\User\Documents\BD\database1\Full Data.accdb"),
+        2: os.getenv("BD2_PATH", r"C:\Users\User\Documents\BD\database2\Full Data.accdb"),
+        3: os.getenv("BD3_PATH", r"C:\Users\User\Documents\BD\database3\Full Data.accdb"),
+        4: os.getenv("BD4_PATH", r"C:\Users\User\Documents\BD\database4\Full Data.accdb"),
+        5: os.getenv("BD5_PATH", r"C:\Users\User\Documents\BD\database5\Full Data.accdb"),
     }
 
+    print("\nCaminhos configurados:")
+    for b_id, path in bancadas.items():
+        print(f"  Bancada {b_id}: {path}")
+    print()
+
     while True:
+        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Iniciando ciclo de sincronização...")
         try:
             for b_id, path in bancadas.items():
-                if not path: continue
+                if not path:
+                    continue
                 
-                # Se o path for o Data, tenta sincronizar ele e o Full Data
-                # Se o path for o Full Data (como está no .env), tenta os dois também
+                # Derivar ambos os caminhos (Data e Full Data) a partir do configurado
                 data_path = path.replace("Full Data.accdb", "Data.accdb")
                 full_path = path.replace("Data.accdb", "Full Data.accdb")
                 
                 if os.path.exists(data_path):
-                    print(f"--- Sincronizando Bancada {b_id} (Data) ---")
+                    print(f"\n--- Sincronizando Bancada {b_id} (Data) ---")
                     sync_file(data_path, b_id)
+                else:
+                    print(f"   [SKIP] Data não encontrado: {data_path}")
                 
                 if os.path.exists(full_path):
-                    print(f"--- Sincronizando Bancada {b_id} (Full Data) ---")
+                    print(f"\n--- Sincronizando Bancada {b_id} (Full Data) ---")
                     sync_file(full_path, b_id)
+                else:
+                    print(f"   [SKIP] Full Data não encontrado: {full_path}")
+
         except KeyboardInterrupt:
+            print("\n[INFO] Sincronização interrompida pelo usuário.")
             break
         except Exception as e:
-            print(f"Erro no loop principal: {e}")
+            print(f"\n[ERRO] Loop principal: {e}")
         
+        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Próximo ciclo em 5 minutos...")
         time.sleep(300)
 
 if __name__ == "__main__":
