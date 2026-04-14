@@ -69,6 +69,23 @@ def map_columns(df, is_full_data=False):
     else:
         return df[required].copy()
 
+STATE_FILE = os.path.join(os.path.dirname(__file__), "sync_state.json")
+
+def load_state() -> dict:
+    """Carrega o estado de última sincronização (para sync incremental)."""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_state(state: dict):
+    """Salva o estado de última sincronização."""
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+
 def sync_file(db_path, bancada_id):
     if not os.path.exists(db_path):
         print(f"   [!] Arquivo não encontrado: {db_path}")
@@ -76,6 +93,7 @@ def sync_file(db_path, bancada_id):
 
     is_full_data_file = "Full Data" in db_path
     target_supabase_table = "full_data" if is_full_data_file else "data"
+    state_key = f"{bancada_id}_{'full' if is_full_data_file else 'data'}"
     
     conn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + db_path + ';'
     
@@ -83,6 +101,8 @@ def sync_file(db_path, bancada_id):
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         tables = [t.table_name for t in cursor.tables(tableType='TABLE') if not t.table_name.startswith('MSys')]
+        
+        state = load_state()
         
         for table_name in tables:
             try:
@@ -99,26 +119,38 @@ def sync_file(db_path, bancada_id):
 
                 df = df.where(pd.notnull(df), None)
                 df['bancada_id'] = int(bancada_id)
-                # sync_at = momento ATUAL da sincronização (usado para status Online/Idle/Offline)
                 df['sync_at'] = datetime.now().isoformat()
-                
-                # Para a tabela 'data', converte 'Save time' -> 'timestamp'
+
                 if not is_full_data_file and 'Save time' in df.columns:
                     try:
                         df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S')
                     except Exception:
-                        df['timestamp'] = df['sync_at']  # Fallback para sync_at se conversão falhar
+                        df['timestamp'] = df['sync_at']
 
                 df = df[df['ID Mark'].notnull()]
                 if df.empty:
                     continue
+
+                # ── SYNC INCREMENTAL ────────────────────────────────────────────────
+                # Na primeira execução: sincroniza tudo.
+                # Nas próximas: sincroniza apenas registros com ID Mark ainda não visto.
+                table_state_key = f"{state_key}_{table_name}"
+                seen_ids: set = set(state.get(table_state_key, []))
                 
-                # ── COMPOSITE ID (FIX CRÍTICO) ──────────────────────────────────────
-                # Garante unicidade POR BANCADA: bancadas diferentes podem ter o mesmo
-                # ID Mark sem se sobrescreverem no Supabase.
+                if seen_ids:
+                    # Filtrar apenas registros novos
+                    df_new = df[~df['ID Mark'].isin(seen_ids)]
+                    if df_new.empty:
+                        print(f"   [SKIP] Tabela '{table_name}': sem registros novos ({len(seen_ids)} já sincronizados)")
+                        continue
+                    print(f"   [Bancada {bancada_id}] INCREMENTAL '{table_name}': {len(df_new)} novos de {len(df)} total")
+                    df = df_new
+                else:
+                    print(f"   [Bancada {bancada_id}] FULL SYNC '{table_name}': {len(df)} registros (primeira vez)")
+
+                # composite_id garante unicidade por bancada
                 df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['ID Mark'].astype(str)
                 
-                # Filtragem estrita — apenas colunas definidas no schema do Supabase
                 allowed_columns = ['composite_id', 'ID Mark', 'bancada_id', 'sync_at']
                 if is_full_data_file:
                     allowed_columns += ['raw_payload']
@@ -128,11 +160,6 @@ def sync_file(db_path, bancada_id):
                 df_final = df[[c for c in allowed_columns if c in df.columns]].copy()
                 records = df_final.to_dict('records')
                 
-                if records:
-                    print(f"   [Bancada {bancada_id}] Tabela '{table_name}' -> {target_supabase_table}. "
-                          f"Colunas: {list(records[0].keys())} | Registros: {len(records)}")
-                
-                # Chunking em lotes de 300
                 chunk_size = 300
                 total_chunks = (len(records) + chunk_size - 1) // chunk_size
                 
@@ -141,11 +168,14 @@ def sync_file(db_path, bancada_id):
                     current_chunk_idx = (i // chunk_size) + 1
                     if total_chunks > 1 and current_chunk_idx % 5 == 0:
                         print(f"      - Progresso: {current_chunk_idx}/{total_chunks}...")
-                    
-                    # upsert usa composite_id como chave única — garante isolamento por bancada
                     supabase.table(target_supabase_table).upsert(
                         chunk, on_conflict='composite_id'
                     ).execute()
+                
+                # Atualizar estado com os IDs já sincronizados desta tabela
+                all_seen = seen_ids.union(set(df['ID Mark'].astype(str).tolist()))
+                state[table_state_key] = list(all_seen)
+                save_state(state)
                     
                 print(f"   [OK] Sincronizado: {target_supabase_table} ({len(records)} registros)")
                 

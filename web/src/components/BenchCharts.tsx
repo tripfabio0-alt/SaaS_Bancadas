@@ -52,8 +52,9 @@ export default function BenchCharts({ bancadaIds = [1, 2, 3, 4, 5] }: ChartsProp
             .from('data')
             .select('timestamp')
             .eq('bancada_id', bid)
-            .gte('timestamp', since)
-            .order('timestamp', { ascending: true });
+            .gte('sync_at', since)
+            .order('sync_at', { ascending: true })
+            .limit(500); // limitar para não sobrecarregar o Supabase
           return { bid, records: data || [] };
         })
       );

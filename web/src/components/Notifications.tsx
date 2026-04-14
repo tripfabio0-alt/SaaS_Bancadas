@@ -98,25 +98,24 @@ export function useNotifications() {
 
   useEffect(() => {
     const checkStatuses = async () => {
-      const { data } = await supabase
-        .from('data')
-        .select('bancada_id, sync_at')
-        .in('bancada_id', [1, 2, 3, 4, 5])
-        .order('sync_at', { ascending: false });
-
-      if (!data) return;
-
-      // Pegar o sync_at mais recente por bancada
-      const latestByBancada: Record<number, string> = {};
-      for (const row of data) {
-        if (!latestByBancada[row.bancada_id]) {
-          latestByBancada[row.bancada_id] = row.sync_at;
-        }
-      }
+      // Buscar apenas o sync_at mais recente de cada bancada — 1 row por bancada (5 total)
+      const results = await Promise.all(
+        [1, 2, 3, 4, 5].map(bid =>
+          supabase
+            .from('data')
+            .select('bancada_id, sync_at')
+            .eq('bancada_id', bid)
+            .order('sync_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        )
+      );
 
       const now = Date.now();
-      for (const id of [1, 2, 3, 4, 5]) {
-        const ts = latestByBancada[id];
+      for (let i = 0; i < 5; i++) {
+        const id = i + 1;
+        const row = results[i].data;
+        const ts = row?.sync_at ?? null;
         let status: string;
 
         if (!ts) {
