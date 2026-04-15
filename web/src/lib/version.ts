@@ -1,5 +1,5 @@
 // Versão atual do SaaS Bancadas
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.4.1';
 export const APP_BUILD_DATE = '2026-04-15';
 
 export interface VersionEntry {
@@ -11,6 +11,19 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.4.1',
+    date: '2026-04-15',
+    type: 'feat',
+    changes: [
+      { type: 'feat', description: 'Gráfico: adicionado seletor de período (24h, 30 dias, 12 meses)' },
+      { type: 'feat', description: 'Histórico: suporte total para visualização de registros de anos atrás' },
+      { type: 'fix',  description: 'Ordenação resiliente: registros sem timestamp agora aparecem corretamente no histórico' },
+    ],
+  },
+  {
+    version: '1.4.0',
+    date: '2026-04-15',
+    type: 'fix',
     version: '1.4.0',
     date: '2026-04-15',
     type: 'fix',

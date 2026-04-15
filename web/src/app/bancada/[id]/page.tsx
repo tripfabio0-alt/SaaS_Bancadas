@@ -71,20 +71,25 @@ export default function BenchDetail() {
     setLoading(true);
     try {
       const tableName = activeTab === 'Data' ? 'data' : 'full_data';
+      
+      // Se timestamp estiver nulo/inválido, o Postgres coloca no topo/fundo.
+      // Vamos tentar ordenar por timestamp mas cair para id se necessário.
       const orderColumn = activeTab === 'Data' ? 'timestamp' : 'sync_at';
+      
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      // Garantir que ID seja um número se a coluna for integer
       const bancadaIdNum = Number(id);
 
+      let query = supabase
+        .from(tableName)
+        .select('*', { count: 'exact' })
+        .eq('bancada_id', bancadaIdNum)
+        .order(orderColumn, { ascending: false, nullsFirst: false })
+        .range(from, to);
+
       const [{ data: result, error, count }, statusRes] = await Promise.all([
-        supabase
-          .from(tableName)
-          .select('*', { count: 'exact' })
-          .eq('bancada_id', bancadaIdNum)
-          .order(orderColumn, { ascending: false })
-          .range(from, to),
+        query,
         supabase
           .from('data')
           .select('sync_at')
