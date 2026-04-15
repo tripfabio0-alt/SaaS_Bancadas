@@ -1,6 +1,6 @@
 // Versão atual do SaaS Bancadas
-export const APP_VERSION = '1.3.0';
-export const APP_BUILD_DATE = '2026-04-14';
+export const APP_VERSION = '1.4.0';
+export const APP_BUILD_DATE = '2026-04-15';
 
 export interface VersionEntry {
   version: string;
@@ -10,6 +10,17 @@ export interface VersionEntry {
 }
 
 export const CHANGELOG: VersionEntry[] = [
+  {
+    version: '1.4.0',
+    date: '2026-04-15',
+    type: 'fix',
+    changes: [
+      { type: 'fix', description: 'Conectividade Supabase: removido fallback estático e adicionado logs de erro' },
+      { type: 'fix', description: 'Gráfico de Atividade: reparado parsing de datas e alinhamento de fuso horário (UTC)' },
+      { type: 'fix', description: 'Timestamps: padronização ISO 8601 com sufixo Z para compatibilidade total' },
+      { type: 'chore', description: 'Limpeza de repositório: ignorando logs locais e arquivos de estado' },
+    ],
+  },
   {
     version: '1.3.0',
     date: '2026-04-14',
