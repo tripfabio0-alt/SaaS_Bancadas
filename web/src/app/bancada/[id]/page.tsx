@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
-const TABS = ['Data', 'Full Data'];
+const TABS = ['Data', 'Full Data', 'Consolidated'];
 const PAGE_SIZE = 100;
 
 type BenchStatus = 'Online' | 'Idle' | 'Offline';
@@ -31,16 +31,36 @@ export default function BenchDetail() {
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [benchStatus, setBenchStatus] = useState<BenchStatus>('Offline');
+  const [visibleFields, setVisibleFields] = useState<string[]>([]);
+
+  const fetchConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_config')
+        .select('admin_settings')
+        .eq('id', 1)
+        .single();
+      
+      if (data) {
+        setVisibleFields(data.admin_settings?.visible_fields || []);
+      }
+    } catch (e) {
+      console.error('Error fetching field config:', e);
+    }
+  };
 
   const exportToCSV = () => {
     if (data.length === 0) return;
     
-    // Pegar todas as chaves únicas presentes nos dados
-    const headers = Object.keys(data[0]);
+    // Pegar apenas os campos visíveis ou todos se nenhum configurado
+    const headers = visibleFields.length > 0 
+        ? visibleFields.filter(f => Object.keys(data[0]).includes(f))
+        : Object.keys(data[0]);
+        
     const csvRows = [];
     
     // Header
-    csvRows.push(headers.join(';')); // Usando ponto e vírgula para compatibilidade com Excel BR
+    csvRows.push(headers.join(';'));
     
     // Data
     for (const row of data) {
@@ -70,11 +90,14 @@ export default function BenchDetail() {
   const fetchData = async (currentPage = page) => {
     setLoading(true);
     try {
-      const tableName = activeTab === 'Data' ? 'data' : 'full_data';
+      if (visibleFields.length === 0) await fetchConfig();
+      
+      const isConsolidated = activeTab === 'Consolidated';
+      const tableName = isConsolidated ? 'consolidated_data' : (activeTab === 'Data' ? 'data' : 'full_data');
       
       // Se timestamp estiver nulo/inválido, o Postgres coloca no topo/fundo.
       // Vamos tentar ordenar por timestamp mas cair para id se necessário.
-      const orderColumn = activeTab === 'Data' ? 'timestamp' : 'sync_at';
+      const orderColumn = isConsolidated ? 'main_timestamp' : (activeTab === 'Data' ? 'timestamp' : 'sync_at');
       
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -82,10 +105,10 @@ export default function BenchDetail() {
       const bancadaIdNum = Number(id);
 
       let query = supabase
-        .from(tableName)
+        .from(tableName as any)
         .select('*', { count: 'exact' })
         .eq('bancada_id', bancadaIdNum)
-        .order(orderColumn, { ascending: false, nullsFirst: false })
+        .order(orderColumn as any, { ascending: false, nullsFirst: false })
         .range(from, to);
 
       const [{ data: result, error, count }, statusRes] = await Promise.all([
@@ -222,10 +245,17 @@ export default function BenchDetail() {
                   <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Error conclusion</th>
                   <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Save time</th>
                 </>
-              ) : (
+              ) : activeTab === 'Full Data' ? (
                 <>
                   <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Technical Data (JSON)</th>
                   <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Captured At</th>
+                </>
+              ) : (
+                <>
+                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Meter Name</th>
+                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Point (qmax)</th>
+                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Tech Metrics</th>
+                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Sync At</th>
                 </>
               )}
               <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Sync Status</th>
@@ -256,7 +286,7 @@ export default function BenchDetail() {
               </tr>
             ) : (
               filteredData.map((item: any, i: number) => (
-                <tr key={item.id || i} className="hover:bg-white/[0.01] transition-colors group">
+                <tr key={item.id || item.data_id || i} className="hover:bg-white/[0.01] transition-colors group">
                   <td className="px-6 py-5">
                     <span className="font-mono text-blue-400">
                       {item['ID Mark'] || item['id_mark'] || item['id mark'] || '-'}
@@ -275,7 +305,7 @@ export default function BenchDetail() {
                         {item['Save time'] || item['save_time'] || item['save time'] || '-'}
                       </td>
                     </>
-                  ) : (
+                  ) : activeTab === 'Full Data' ? (
                     <>
                       <td className="px-6 py-5">
                         <div className="max-w-md">
@@ -288,6 +318,8 @@ export default function BenchDetail() {
                                     ? JSON.parse(item.raw_payload) 
                                     : item.raw_payload;
                                   
+                                  if (!payload) return <span className="text-white/20 italic">Empty payload</span>;
+
                                   // Pegar apenas as primeiras 4 chaves para manter compacto
                                   const keys = Object.keys(payload);
                                   const preview = keys.slice(0, 4).map(k => (
@@ -312,7 +344,33 @@ export default function BenchDetail() {
                         </div>
                       </td>
                       <td className="px-6 py-5 text-white/40 text-sm font-mono">
-                        {item['timestamp'] ? new Date(item['timestamp']).toLocaleString() : '-'}
+                        {item['timestamp'] || item['sync_at'] ? new Date(item['timestamp'] || item['sync_at']).toLocaleString() : '-'}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-6 py-5 text-white/60 font-semibold">
+                        {item['Meter Number'] || '-'}
+                      </td>
+                      <td className="px-6 py-5">
+                         <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 uppercase">
+                           {item['test_point'] || 'qmax'}
+                         </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1 text-[11px]">
+                           <div className="flex justify-between gap-4">
+                             <span className="text-white/30 uppercase">Flow:</span>
+                             <span className="text-white/70 font-mono">{item['flow_rate'] || 'N/A'}</span>
+                           </div>
+                           <div className="flex justify-between gap-4">
+                             <span className="text-white/30 uppercase">Temp:</span>
+                             <span className="text-white/70 font-mono">{item['temperature'] || 'N/A'}</span>
+                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-white/40 text-[10px] font-mono whitespace-nowrap">
+                        {item['last_sync'] ? new Date(item['last_sync']).toLocaleString() : '-'}
                       </td>
                     </>
                   )}

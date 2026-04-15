@@ -39,6 +39,19 @@ export default function Sidebar() {
           <LayoutDashboard size={20} />
           <span className="font-medium">Overview</span>
         </Link>
+        
+        <Link
+          href="/reports"
+          className={cn(
+            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+            pathname === '/reports'
+              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
+              : "text-white/60 hover:bg-white/5 hover:text-white"
+          )}
+        >
+          <Activity size={20} />
+          <span className="font-medium">Reports</span>
+        </Link>
 
         <div className="pt-6 pb-2">
           <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Test Benches</p>
