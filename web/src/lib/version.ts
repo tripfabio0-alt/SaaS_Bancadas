@@ -1,5 +1,5 @@
 // Versão atual do SaaS Bancadas
-export const APP_VERSION = '1.4.1';
+export const APP_VERSION = '1.4.2';
 export const APP_BUILD_DATE = '2026-04-15';
 
 export interface VersionEntry {
@@ -10,6 +10,14 @@ export interface VersionEntry {
 }
 
 export const CHANGELOG: VersionEntry[] = [
+  {
+    version: '1.4.2',
+    date: '2026-04-15',
+    type: 'fix',
+    changes: [
+      { type: 'fix', description: 'Correção crítica: importação de utilitário (cn) que estava quebrando o build de produção' },
+    ],
+  },
   {
     version: '1.4.1',
     date: '2026-04-15',

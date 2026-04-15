@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingUp, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const BENCH_COLORS = ['#60a5fa', '#818cf8', '#34d399', '#f59e0b', '#f87171'];
 
