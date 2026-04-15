@@ -10,6 +10,7 @@ const TYPE_CONFIG = {
   minor: { label: 'Minor', color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20'   },
   patch: { label: 'Patch', color: 'text-emerald-400',bg: 'bg-emerald-500/10',border: 'border-emerald-500/20'},
   fix:   { label: 'Fix',   color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20'  },
+  feat:  { label: 'Feature', color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20'   },
 };
 
 const CHANGE_ICON = {

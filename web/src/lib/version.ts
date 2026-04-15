@@ -1,15 +1,26 @@
 // Versão atual do SaaS Bancadas
-export const APP_VERSION = '1.4.2';
+export const APP_VERSION = '1.5.0';
 export const APP_BUILD_DATE = '2026-04-15';
 
 export interface VersionEntry {
   version: string;
   date: string;
-  type: 'major' | 'minor' | 'patch' | 'fix';
+  type: 'major' | 'minor' | 'patch' | 'fix' | 'feat';
   changes: { type: 'feat' | 'fix' | 'chore'; description: string }[];
 }
 
 export const CHANGELOG: VersionEntry[] = [
+  {
+    version: '1.5.0',
+    date: '2026-04-15',
+    type: 'minor',
+    changes: [
+      { type: 'feat', description: 'Produção: Entrega final das otimizações de dashboard' },
+      { type: 'feat', description: 'Performance: Gráficos históricos multiescala (24h, 30d, 12m) com agrupamento inteligente' },
+      { type: 'fix',  description: 'Sincronização: Bridge de dados agora usa composite_id para evitar colisões entre bancadas' },
+      { type: 'fix',  description: 'Timestamps: Padronização completa para ISO 8601 (UTC) em todo o ecossistema' },
+    ],
+  },
   {
     version: '1.4.2',
     date: '2026-04-15',
@@ -29,9 +40,6 @@ export const CHANGELOG: VersionEntry[] = [
     ],
   },
   {
-    version: '1.4.0',
-    date: '2026-04-15',
-    type: 'fix',
     version: '1.4.0',
     date: '2026-04-15',
     type: 'fix',
