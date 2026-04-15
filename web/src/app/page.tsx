@@ -33,7 +33,7 @@ export default function Home() {
     try {
       const { data, error } = await supabase
         .from('data')
-        .select('"ID Mark", bancada_id, "Meter Number", "Error conclusion", "Save time", timestamp, sync_at')
+        .select('ID Mark, bancada_id, Meter Number, Error conclusion, Save time, timestamp, sync_at')
         .order('timestamp', { ascending: false })
         .limit(10000);
 
