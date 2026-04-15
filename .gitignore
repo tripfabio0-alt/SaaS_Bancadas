@@ -17,3 +17,8 @@ sync/.env
 # OS
 .DS_Store
 Thumbs.db
+
+# Workspace
+scratch/
+.claude/
+sync/sync_state.json

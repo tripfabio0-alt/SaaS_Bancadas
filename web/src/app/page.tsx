@@ -78,10 +78,14 @@ export default function Home() {
             const { count, error } = await supabase
               .from('data')
               .select('*', { count: 'exact', head: true });
-            if (error) throw error;
+            if (error) {
+              console.error('FETCH_TOTAL_ERROR:', error);
+              throw error;
+            }
             return count || 0;
-          } catch {
-            return 339636;
+          } catch (e) {
+            console.error('TOTAL_RECORDS_MIGRATION_ERROR:', e);
+            return 0; // Mostrar 0 faz o erro ser percebido, o fallback escondia a falha
           }
         };
 

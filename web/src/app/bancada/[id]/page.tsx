@@ -71,29 +71,30 @@ export default function BenchDetail() {
     setLoading(true);
     try {
       const tableName = activeTab === 'Data' ? 'data' : 'full_data';
-      // full_data usa sync_at como campo de ordenação; data usa timestamp
       const orderColumn = activeTab === 'Data' ? 'timestamp' : 'sync_at';
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
+
+      // Garantir que ID seja um número se a coluna for integer
+      const bancadaIdNum = Number(id);
 
       const [{ data: result, error, count }, statusRes] = await Promise.all([
         supabase
           .from(tableName)
           .select('*', { count: 'exact' })
-          .eq('bancada_id', Number(id))
+          .eq('bancada_id', bancadaIdNum)
           .order(orderColumn, { ascending: false })
           .range(from, to),
-        // Para o status, buscar sync_at mais recente (não o timestamp do dado)
         supabase
           .from('data')
           .select('sync_at')
-          .eq('bancada_id', Number(id))
+          .eq('bancada_id', bancadaIdNum)
           .order('sync_at', { ascending: false })
           .limit(1),
       ]);
 
       if (error) {
-        console.error('Supabase Error:', error);
+        console.error(`ERROR_FETCHING_${tableName.toUpperCase()}:`, error);
         throw error;
       }
 
@@ -103,7 +104,7 @@ export default function BenchDetail() {
       const latest = statusRes.data?.[0];
       setBenchStatus(getBenchStatus(latest?.sync_at ?? null));
     } catch (err: any) {
-      console.error('Erro ao buscar detalhes:', err);
+      console.error('FETCH_BENCH_DETAILS_CRITICAL:', err);
       setData([]);
     } finally {
       setLoading(false);

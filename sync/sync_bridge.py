@@ -119,11 +119,12 @@ def sync_file(db_path, bancada_id):
 
                 df = df.where(pd.notnull(df), None)
                 df['bancada_id'] = int(bancada_id)
-                df['sync_at'] = datetime.now().isoformat()
+                df['sync_at'] = datetime.utcnow().isoformat() + 'Z'
 
                 if not is_full_data_file and 'Save time' in df.columns:
                     try:
-                        df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S')
+                        # Forçar formato ISO robusto com 'Z' (UTC)
+                        df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
                     except Exception:
                         df['timestamp'] = df['sync_at']
 

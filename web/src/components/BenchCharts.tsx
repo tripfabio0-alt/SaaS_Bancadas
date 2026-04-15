@@ -50,11 +50,11 @@ export default function BenchCharts({ bancadaIds = [1, 2, 3, 4, 5] }: ChartsProp
         bancadaIds.map(async (bid) => {
           const { data } = await supabase
             .from('data')
-            .select('timestamp')
+            .select('timestamp, sync_at')
             .eq('bancada_id', bid)
             .gte('sync_at', since)
             .order('sync_at', { ascending: true })
-            .limit(500); // limitar para não sobrecarregar o Supabase
+            .limit(1000); 
           return { bid, records: data || [] };
         })
       );
@@ -70,8 +70,21 @@ export default function BenchCharts({ bancadaIds = [1, 2, 3, 4, 5] }: ChartsProp
 
       for (const { bid, records } of results) {
         for (const rec of records) {
-          const h = new Date(rec.timestamp);
-          const key = `${String(h.getHours()).padStart(2, '0')}:00`;
+          // Usar timestamp original mas tratar possíveis formatos
+          let date;
+          try {
+            // Se o timestamp for string ISO ou formato reconhecido
+            date = new Date(rec.timestamp);
+            
+            // Fallback se o timestamp do banco estiver incompleto ou inválido
+            if (isNaN(date.getTime())) {
+              date = new Date(rec.sync_at);
+            }
+          } catch {
+            date = new Date(rec.sync_at);
+          }
+
+          const key = `${String(date.getHours()).padStart(2, '0')}:00`;
           if (hours[key]) {
             (hours[key][`B${bid}`] as number) += 1;
           }
