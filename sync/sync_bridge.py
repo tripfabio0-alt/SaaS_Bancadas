@@ -162,7 +162,10 @@ def sync_relatorio_csv(csv_path):
             'LOTE PRODUTO': 'lote_produto',
             'DATA VINCULO': 'data_vinculo',
             'TIPO': 'tipo',
-            'COD. LACRE': 'cod_lacre'
+            'COD. LACRE': 'cod_lacre',
+            'SEQ. LOTE': 'seq_lote',
+            'COD. INMETRO': 'cod_inmetro',
+            'LOTE INMETRO': 'lote_inmetro'
         }
         df = df.rename(columns=mapping)
         df = df[[c for c in mapping.values() if c in df.columns]]

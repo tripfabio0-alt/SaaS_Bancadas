@@ -131,27 +131,31 @@ export default function BenchDetail() {
   const hasNext = page < totalPages - 1;
 
   const FIELD_LABELS: Record<string, string> = {
-    'ID Mark': 'ID Mark',
-    'Meter Number': 'Meter Number',
-    'Lote': 'Lote (CSV)',
-    'Lacre': 'Lacre',
-    'Error conclusion': 'Status',
-    'Note': 'Observations',
-    'Save time': 'Access Time',
-    'timestamp': 'Full Datetime',
-    'test_point': 'Test Pt',
-    'flow_rate': 'Flow Rate',
-    'temperature': 'Temp',
-    'pressure': 'Press',
-    'status': 'Raw Status',
-    'data_vinculo': 'Vinc. Date',
-    'tipo': 'Type',
-    'cod_lacre': 'Seal Code'
+    'meter_number': 'Meter Serial',
+    'lote_produto': 'Lote (CSV)',
+    'lacre': 'Lacre',
+    'status_resultado': 'Status',
+    'observacao': 'Notes',
+    'data_hora': 'Test Time',
+    'id_mark_bancada': 'ID Mark',
+    'data_access': 'Access Save',
+    'cod_lacre': 'Cod. Lacre',
+    'seq_lote': 'Seq. Lote',
+    'csv_data_vinculo': 'Vinc. Date',
+    'csv_tipo': 'CSV Type',
+    'cod_inmetro': 'Cod. Inmetro',
+    'lote_inmetro': 'Lote Inmetro',
+    'ponto_teste': 'Test Pt',
+    'vazao_real': 'Flow Rate',
+    'erro_relativo': 'Rel. Error',
+    'temperatura_celcius': 'Temp °C',
+    'pressao_pa': 'Press Pa',
+    'status_tecnico': 'Tech Status'
   };
 
   const formatCellValue = (field: string, value: any) => {
     if (value === null || value === undefined) return '-';
-    if (field === 'timestamp' || field === 'Save time' || field === 'data_vinculo') {
+    if (field === 'data_hora' || field === 'data_access' || field === 'csv_data_vinculo') {
         return new Date(value).toLocaleString('pt-BR');
     }
     return String(value);

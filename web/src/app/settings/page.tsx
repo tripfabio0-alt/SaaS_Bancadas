@@ -4,33 +4,32 @@ import { useState, useEffect } from 'react';
 import { 
   Save, AlertTriangle, CheckCircle2, Database, Clock, Server, 
   Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
-  FolderSearch, RefreshCw, Layers
+  FolderSearch, RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
 
-const AVAILABLE_FIELDS = [
-  'ID Mark', 'Meter Number', 'Lote', 'Lacre', 'Error conclusion', 'Note', 
-  'Save time', 'timestamp', 'test_point', 'flow_rate', 'temperature', 
-  'pressure', 'status', 'data_vinculo', 'tipo', 'cod_lacre'
+const DISPLAY_FIELDS = [
+  { id: 'meter_number', label: 'Meter Serial', group: 'Basic' },
+  { id: 'lote_produto', label: 'Lote (CSV)', group: 'CSV' },
+  { id: 'lacre', label: 'Lacre (CSV)', group: 'CSV' },
+  { id: 'status_resultado', label: 'Status Result', group: 'Basic' },
+  { id: 'observacao', label: 'Notes/Obs', group: 'Basic' },
+  { id: 'data_hora', label: 'Test Time', group: 'Basic' },
+  { id: 'data_access', label: 'Access Time', group: 'Technical' },
+  { id: 'id_mark_bancada', label: 'Bench ID Mark', group: 'Technical' },
+  { id: 'cod_lacre', label: 'Cod. Lacre (CSV)', group: 'CSV' },
+  { id: 'seq_lote', label: 'Seq. Lote (CSV)', group: 'CSV' },
+  { id: 'csv_data_vinculo', label: 'Vinc. Date (CSV)', group: 'CSV' },
+  { id: 'cod_inmetro', label: 'Cod. Inmetro', group: 'CSV' },
+  { id: 'lote_inmetro', label: 'Lote Inmetro', group: 'CSV' },
+  { id: 'ponto_teste', label: 'Point (Qmax/min)', group: 'Technical' },
+  { id: 'vazao_real', label: 'Flow Rate', group: 'Technical' },
+  { id: 'erro_relativo', label: 'Rel. Error', group: 'Technical' },
+  { id: 'temperatura_celcius', label: 'Temp °C', group: 'Technical' },
+  { id: 'pressao_pa', label: 'Pressure Pa', group: 'Technical' },
+  { id: 'status_tecnico', label: 'Tech Status', group: 'Technical' },
+  { id: 'composite_id', label: 'Composite ID', group: 'System' },
+  { id: 'bancada_id', label: 'Bench #', group: 'System' },
 ];
-
-interface PathPair {
-  data: string;
-  fullData: string;
-}
-
-interface BenchConfig {
-  id: number;
-  name: string;
-  paths: PathPair[];
-}
-
-interface CSVConfig {
-  path: string;
-  last_sync: string | null;
-}
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
@@ -53,7 +52,7 @@ export default function SettingsPage() {
           .single();
         
         if (data) {
-          setVisibleFields(data.admin_settings?.visible_fields || []);
+          setVisibleFields(data.admin_settings?.visible_fields || ['meter_number', 'lote_produto', 'lacre', 'status_resultado']);
           setTestPointFilter(data.report_vars?.default_test_point_filter || 'qmax');
           setBenches(data.benches_config || []);
           setCsvConfig(data.csv_config || { path: '', last_sync: null });
@@ -71,6 +70,15 @@ export default function SettingsPage() {
     setVisibleFields(prev => 
       prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]
     );
+  };
+
+  const moveField = (index: number, direction: 'up' | 'down') => {
+    const newFields = [...visibleFields];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex >= 0 && targetIndex < newFields.length) {
+      [newFields[index], newFields[targetIndex]] = [newFields[targetIndex], newFields[index]];
+      setVisibleFields(newFields);
+    }
   };
 
   // --- Dynamic Bench Management ---

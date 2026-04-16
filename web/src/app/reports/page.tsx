@@ -55,22 +55,26 @@ export default function ReportsPage() {
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
 
   const FIELD_LABELS: Record<string, string> = {
-    'ID Mark': 'ID Mark',
-    'Meter Number': 'Meter Number',
-    'Lote': 'Lote (CSV)',
-    'Lacre': 'Lacre',
-    'Error conclusion': 'Status',
-    'Note': 'Observations',
-    'Save time': 'Access Time',
-    'timestamp': 'Full Datetime',
-    'test_point': 'Test Pt',
-    'flow_rate': 'Flow Rate',
-    'temperature': 'Temp',
-    'pressure': 'Press',
-    'status': 'Raw Status',
-    'data_vinculo': 'Vinc. Date',
-    'tipo': 'Type',
-    'cod_lacre': 'Seal Code'
+    'meter_number': 'Meter Serial',
+    'lote_produto': 'Lote (CSV)',
+    'lacre': 'Lacre',
+    'status_resultado': 'Status',
+    'observacao': 'Notes',
+    'data_hora': 'Test Time',
+    'id_mark_bancada': 'ID Mark',
+    'data_access': 'Access Save',
+    'cod_lacre': 'Cod. Lacre',
+    'seq_lote': 'Seq. Lote',
+    'csv_data_vinculo': 'Vinc. Date',
+    'csv_tipo': 'CSV Type',
+    'cod_inmetro': 'Cod. Inmetro',
+    'lote_inmetro': 'Lote Inmetro',
+    'ponto_teste': 'Test Pt',
+    'vazao_real': 'Flow Rate',
+    'erro_relativo': 'Rel. Error',
+    'temperatura_celcius': 'Temp °C',
+    'pressao_pa': 'Press Pa',
+    'status_tecnico': 'Tech Status'
   };
 
   const fetchConfig = async () => {
@@ -78,8 +82,7 @@ export default function ReportsPage() {
     if (data?.admin_settings?.visible_fields) {
       setVisibleFields(data.admin_settings.visible_fields);
     } else {
-      // Default fallback
-      setVisibleFields(['Meter Number', 'Lote', 'Lacre', 'Error conclusion', 'Note', 'timestamp']);
+      setVisibleFields(['meter_number', 'lote_produto', 'lacre', 'status_resultado', 'data_hora']);
     }
   };
 
@@ -89,10 +92,10 @@ export default function ReportsPage() {
       await fetchConfig();
       let query = supabase.from('global_uniao').select('*');
       
-      if (searchTerm) query = query.ilike('Meter Number', `%${searchTerm}%`);
-      if (searchLote) query = query.ilike('lote', `%${searchLote}%`);
+      if (searchTerm) query = query.ilike('meter_number', `%${searchTerm}%`);
+      if (searchLote) query = query.ilike('lote_produto', `%${searchLote}%`);
       
-      const { data, error } = await query.order('timestamp', { ascending: false }).limit(200);
+      const { data, error } = await query.order('data_hora', { ascending: false }).limit(200);
       if (error) throw error;
       setReportData(data || []);
       

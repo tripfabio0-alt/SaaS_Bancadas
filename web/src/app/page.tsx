@@ -47,7 +47,7 @@ export default function Home() {
       const { data: unionData } = await supabase
         .from('global_uniao')
         .select('*')
-        .order('timestamp', { ascending: false })
+        .order('data_hora', { ascending: false })
         .limit(10);
       setRecentRecords(unionData || []);
 
@@ -55,7 +55,7 @@ export default function Home() {
       const { count: totalCount } = await supabase.from('data').select('*', { count: 'exact', head: true });
       const { data: recentSync } = await supabase.from('data').select('sync_at').order('sync_at', { ascending: false }).limit(1);
       
-      // Contagem de Lotes únicos (extraído do CSV synchronizado)
+      // Contagem de Lotes únicos (extraído do CSV sincronizado)
       const { data: lotesData } = await supabase.from('vinculo_lacre').select('lote_produto', { count: 'exact', head: false });
       const uniqueLotes = new Set(lotesData?.map(l => l.lote_produto)).size;
 
