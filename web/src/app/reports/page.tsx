@@ -52,28 +52,50 @@ export default function ReportsPage() {
     activeBenches: 0
   });
 
+  const [visibleFields, setVisibleFields] = useState<string[]>([]);
+
+  const FIELD_LABELS: Record<string, string> = {
+    'ID Mark': 'ID Mark',
+    'Meter Number': 'Meter Number',
+    'Lote': 'Lote (CSV)',
+    'Lacre': 'Lacre',
+    'Error conclusion': 'Status',
+    'Note': 'Observations',
+    'Save time': 'Access Time',
+    'timestamp': 'Full Datetime',
+    'test_point': 'Test Pt',
+    'flow_rate': 'Flow Rate',
+    'temperature': 'Temp',
+    'pressure': 'Press',
+    'status': 'Raw Status',
+    'data_vinculo': 'Vinc. Date',
+    'tipo': 'Type',
+    'cod_lacre': 'Seal Code'
+  };
+
+  const fetchConfig = async () => {
+    const { data } = await supabase.from('app_config').select('admin_settings').eq('id', 1).single();
+    if (data?.admin_settings?.visible_fields) {
+      setVisibleFields(data.admin_settings.visible_fields);
+    } else {
+      // Default fallback
+      setVisibleFields(['Meter Number', 'Lote', 'Lacre', 'Error conclusion', 'Note', 'timestamp']);
+    }
+  };
+
   const fetchGlobalHistory = async () => {
     setLoading(true);
     try {
-      // Usando a View global_uniao criada no SQL
+      await fetchConfig();
       let query = supabase.from('global_uniao').select('*');
       
-      if (searchTerm) {
-          query = query.ilike('Meter Number', `%${searchTerm}%`);
-      }
+      if (searchTerm) query = query.ilike('Meter Number', `%${searchTerm}%`);
+      if (searchLote) query = query.ilike('lote', `%${searchLote}%`);
       
-      if (searchLote) {
-          query = query.ilike('lote', `%${searchLote}%`);
-      }
-      
-      const { data, error } = await query
-        .order('timestamp', { ascending: false })
-        .limit(200);
-
+      const { data, error } = await query.order('timestamp', { ascending: false }).limit(200);
       if (error) throw error;
       setReportData(data || []);
       
-      // Contagem total rápida
       const { count } = await supabase.from('data').select('*', { count: 'exact', head: true });
       setStats(prev => ({ ...prev, totalTests: count || 0 }));
     } catch (e) {
@@ -124,6 +146,15 @@ export default function ReportsPage() {
     else if (activeReport === 'uptime') fetchProductivityReport();
   }, [activeReport, activePeriod]);
 
+  // Auxiliar para formatar valores de células
+  const formatCellValue = (field: string, value: any) => {
+    if (value === null || value === undefined) return '-';
+    if (field === 'timestamp' || field === 'Save time' || field === 'data_vinculo') {
+        return new Date(value).toLocaleString('pt-BR');
+    }
+    return String(value);
+  };
+
   return (
     <div className="space-y-10 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -147,7 +178,10 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 hover:bg-blue-500/20 transition-all">
+          <button 
+            onClick={() => activeReport === 'history' ? fetchGlobalHistory() : fetchProductivityReport()}
+            className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 hover:bg-blue-500/20 transition-all"
+          >
             <Download size={20} />
           </button>
         </div>
@@ -158,7 +192,7 @@ export default function ReportsPage() {
           { label: 'Total Synchronized', value: stats.totalTests.toLocaleString(), icon: Hash, color: 'blue' },
           { label: 'Avg Test Cycle', value: stats.avgTestTime, icon: Timer, color: 'emerald' },
           { label: 'Productivity Index', value: stats.totalUptime, icon: Activity, color: 'amber' },
-          { label: 'Consolidated Records', value: '341k+', icon: Clock, color: 'indigo' },
+          { label: 'Active Channels', value: 'Live', icon: RefreshCw, color: 'indigo' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -205,20 +239,20 @@ export default function ReportsPage() {
              <div className="p-6 bg-blue-500/5 rounded-[32px] border border-blue-500/10 space-y-4">
                 <div className="flex items-center gap-2 text-blue-400">
                     <Filter size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Active Filters</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Production Feed Filters</span>
                 </div>
                 <div className="space-y-3">
-                   <div>
-                       <label className="text-[9px] text-white/20 uppercase block mb-1.5 ml-1">Lote (From CSV)</label>
-                       <input 
-                         type="text" 
-                         value={searchLote}
-                         onChange={(e) => setSearchLote(e.target.value)}
-                         onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
-                         placeholder="Filter by Batch..."
-                         className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[10px] font-mono text-white/60 focus:outline-none focus:border-blue-500/40"
-                       />
-                   </div>
+                    <div>
+                        <label className="text-[9px] text-white/20 uppercase block mb-1.5 ml-1">Lote (From CSV)</label>
+                        <input 
+                          type="text" 
+                          value={searchLote}
+                          onChange={(e) => setSearchLote(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
+                          placeholder="Filter by Batch..."
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[10px] font-mono text-white/60 focus:outline-none focus:border-blue-500/40"
+                        />
+                    </div>
                 </div>
              </div>
           </div>
@@ -292,58 +326,76 @@ export default function ReportsPage() {
                 </div>
             ) : (
                 <div className="flex-1 overflow-x-auto px-1">
-                    <table className="w-full text-left">
+                    <table className="w-full text-left whitespace-nowrap">
                         <thead>
                             <tr className="border-b border-white/5">
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Meter Serial</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Lote (CSV)</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Bancada</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Status</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Obs (Note)</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Date</th>
+                                {visibleFields.map(field => (
+                                    <th key={field} className="px-6 py-4 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+                                        {FIELD_LABELS[field] || field}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.03]">
                             {reportData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="py-20 text-center text-white/10 italic">
-                                        No unified records found.
+                                    <td colSpan={visibleFields.length} className="py-20 text-center text-white/10 italic">
+                                        No unified records found matching criteria.
                                     </td>
                                 </tr>
                             ) : (
                                 reportData.map((row, i) => (
                                     <tr key={i} className="group hover:bg-white/[0.01]">
-                                        <td className="px-6 py-4 font-mono text-blue-400 font-bold">{row['Meter Number']}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={cn(
-                                                "px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/10",
-                                                !row.lote && "opacity-20"
-                                            )}>
-                                                {row.lote || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-white/60 text-xs">Bancada {row.bancada_id}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={cn(
-                                                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                                                row['Error conclusion'] === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                                            )}>
-                                                {row['Error conclusion']}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {row.note ? (
-                                                <div className="flex items-center gap-2 text-white/40 text-[10px]">
-                                                    <StickyNote size={12} className="shrink-0 text-amber-500/50" />
-                                                    <span className="truncate max-w-[120px]">{row.note}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-white/5">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-white/20 text-xs font-mono">
-                                            {new Date(row.timestamp).toLocaleDateString('pt-BR')}
-                                        </td>
+                                        {visibleFields.map(field => {
+                                            const val = row[field] || row[field.toLowerCase()] || (field === 'Lote' ? row.lote : null) || (field === 'Lacre' ? row.lacre : null);
+                                            
+                                            // Estilizações especiais por campo
+                                            if (field === 'Meter Number') {
+                                                return <td key={field} className="px-6 py-4 font-mono text-blue-400 font-bold text-sm tracking-tighter">{val}</td>;
+                                            }
+                                            if (field === 'Error conclusion') {
+                                                return (
+                                                    <td key={field} className="px-6 py-4">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",
+                                                            val === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                                                        )}>
+                                                            {val}
+                                                        </span>
+                                                    </td>
+                                                );
+                                            }
+                                            if (field === 'Lote' || field === 'Lacre') {
+                                                return (
+                                                    <td key={field} className="px-6 py-4">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border",
+                                                            val ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/10 border-transparent"
+                                                        )}>
+                                                            {val || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                );
+                                            }
+                                            if (field === 'Note') {
+                                                return (
+                                                    <td key={field} className="px-6 py-4">
+                                                        {val ? (
+                                                            <div className="flex items-center gap-2 text-white/40 text-[10px]">
+                                                                <StickyNote size={12} className="shrink-0 text-amber-500/50" />
+                                                                <span className="truncate max-w-[120px]">{val}</span>
+                                                            </div>
+                                                        ) : <span className="text-white/5">-</span>}
+                                                    </td>
+                                                );
+                                            }
+
+                                            return (
+                                                <td key={field} className="px-6 py-4 text-white/40 text-xs font-mono tracking-tight">
+                                                    {formatCellValue(field, val)}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))
                             )}

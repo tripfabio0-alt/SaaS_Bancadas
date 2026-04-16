@@ -130,6 +130,33 @@ export default function BenchDetail() {
   const hasPrev = page > 0;
   const hasNext = page < totalPages - 1;
 
+  const FIELD_LABELS: Record<string, string> = {
+    'ID Mark': 'ID Mark',
+    'Meter Number': 'Meter Number',
+    'Lote': 'Lote (CSV)',
+    'Lacre': 'Lacre',
+    'Error conclusion': 'Status',
+    'Note': 'Observations',
+    'Save time': 'Access Time',
+    'timestamp': 'Full Datetime',
+    'test_point': 'Test Pt',
+    'flow_rate': 'Flow Rate',
+    'temperature': 'Temp',
+    'pressure': 'Press',
+    'status': 'Raw Status',
+    'data_vinculo': 'Vinc. Date',
+    'tipo': 'Type',
+    'cod_lacre': 'Seal Code'
+  };
+
+  const formatCellValue = (field: string, value: any) => {
+    if (value === null || value === undefined) return '-';
+    if (field === 'timestamp' || field === 'Save time' || field === 'data_vinculo') {
+        return new Date(value).toLocaleString('pt-BR');
+    }
+    return String(value);
+  };
+
   return (
     <div className="space-y-8 pb-32">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -205,107 +232,134 @@ export default function BenchDetail() {
       </div>
 
       <div className="glass-card rounded-[40px] overflow-hidden border border-white/5 relative">
-        <table className="w-full text-left">
-          <thead className="border-b border-white/5 bg-white/[0.02]">
-            <tr>
-              <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
-              {activeTab === 'Data' ? (
-                <>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Number</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Conclusion</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Obs (Note)</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Save Time</th>
-                </>
-              ) : activeTab === 'Full Data' ? (
-                <>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">JSON Payload</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Sync At</th>
-                </>
-              ) : (
-                <>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Name</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Lote (CSV)</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Tech Metrics</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Timestamp</th>
-                </>
-              )}
-              <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {loading ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left whitespace-nowrap">
+            <thead className="border-b border-white/5 bg-white/[0.02]">
               <tr>
-                <td colSpan={6} className="px-8 py-32 text-center">
-                   <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4 opacity-20" />
-                   <p className="text-white/20 font-bold tracking-widest text-xs uppercase">Pulling Datastream...</p>
-                </td>
+                {activeTab === 'Data' ? (
+                  <>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Number</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Conclusion</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Obs (Note)</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Save Time</th>
+                  </>
+                ) : activeTab === 'Full Data' ? (
+                  <>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">JSON Payload</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Sync At</th>
+                  </>
+                ) : (
+                  <>
+                    {visibleFields.map(field => (
+                        <th key={field} className="px-8 py-6 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+                            {FIELD_LABELS[field] || field}
+                        </th>
+                    ))}
+                  </>
+                )}
+                <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Action</th>
               </tr>
-            ) : filteredData.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-8 py-20 text-center text-white/10 italic">No records found.</td>
-              </tr>
-            ) : (
-              filteredData.map((item: any, i: number) => (
-                <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
-                  <td className="px-8 py-5">
-                    <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || item['id_mark'] || '-'}</span>
-                  </td>
-                  
-                  {activeTab === 'Data' ? (
-                    <>
-                      <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
-                      <td className="px-8 py-5">
-                         <span className={cn(
-                             "px-2 py-0.5 rounded-md text-[10px] font-bold",
-                             item['Error conclusion'] === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                         )}>
-                           {item['Error conclusion'] || '-'}
-                         </span>
-                      </td>
-                      <td className="px-8 py-5 text-white/30 text-[10px]">
-                         {item.note ? <div className="flex items-center gap-2"><StickyNote size={12} className="text-amber-500" /> {item.note}</div> : '-'}
-                      </td>
-                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || '-'}</td>
-                    </>
-                  ) : activeTab === 'Full Data' ? (
-                    <>
-                      <td className="px-8 py-5">
-                        <div className="bg-black/20 border border-white/5 rounded-xl p-3 font-mono text-[10px] text-white/40 max-w-sm truncate">
-                          {JSON.stringify(item.raw_payload || item)}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
-                        {new Date(item.sync_at).toLocaleString()}
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
-                      <td className="px-8 py-5">
-                        <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md text-[10px] font-bold border border-indigo-500/10">
-                           {item.lote || 'No Link'}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex gap-4 text-[10px] font-bold uppercase">
-                           <span className="text-white/20">Point: <span className="text-white/60">{item.test_point || 'qmax'}</span></span>
-                           <span className="text-white/20">Rate: <span className="text-white/60">{item.flow_rate || 'N/A'}</span></span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </td>
-                    </>
-                  )}
-
-                  <td className="px-8 py-5">
-                    <button className="text-[10px] font-black uppercase text-white/10 group-hover:text-blue-400 transition-all tracking-widest">Detail View</button>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr>
+                  <td colSpan={activeTab === 'Consolidated' ? visibleFields.length + 1 : 10} className="px-8 py-32 text-center">
+                    <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4 opacity-20" />
+                    <p className="text-white/20 font-bold tracking-widest text-xs uppercase">Pulling Datastream...</p>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-8 py-20 text-center text-white/10 italic">No records found.</td>
+                </tr>
+              ) : (
+                filteredData.map((item: any, i: number) => (
+                  <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
+                    {activeTab === 'Data' ? (
+                      <>
+                        <td className="px-8 py-5">
+                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || '-'}</span>
+                        </td>
+                        <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
+                        <td className="px-8 py-5">
+                          <span className={cn(
+                              "px-2 py-0.5 rounded-md text-[10px] font-bold",
+                              item['Error conclusion'] === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                          )}>
+                            {item['Error conclusion'] || '-'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-white/30 text-[10px]">
+                          {item.note ? <div className="flex items-center gap-2 text-amber-400/60 leading-none"><StickyNote size={12} /> <span className="truncate max-w-[120px]">{item.note}</span></div> : '-'}
+                        </td>
+                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || '-'}</td>
+                      </>
+                    ) : activeTab === 'Full Data' ? (
+                      <>
+                        <td className="px-8 py-5">
+                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || '-'}</span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="bg-black/20 border border-white/5 rounded-xl p-3 font-mono text-[10px] text-white/40 max-w-sm truncate">
+                            {JSON.stringify(item.raw_payload || item)}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
+                          {new Date(item.sync_at).toLocaleString('pt-BR')}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        {visibleFields.map(field => {
+                            const val = item[field] || item[field.toLowerCase()] || (field === 'Lote' ? item.lote : null) || (field === 'Lacre' ? item.lacre : null);
+                            
+                            if (field === 'Meter Number') {
+                                return <td key={field} className="px-8 py-5 font-mono text-blue-400 font-bold text-sm tracking-tighter">{val || '-'}</td>;
+                            }
+                            if (field === 'Error conclusion') {
+                                return (
+                                    <td key={field} className="px-8 py-5">
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                            val === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                                        )}>
+                                            {val || 'N/A'}
+                                        </span>
+                                    </td>
+                                );
+                            }
+                            if (field === 'Lote' || field === 'Lacre') {
+                                return (
+                                    <td key={field} className="px-8 py-5">
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border",
+                                            val ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/10 border-transparent"
+                                        )}>
+                                            {val || 'N/A'}
+                                        </span>
+                                    </td>
+                                );
+                            }
+                            return (
+                                <td key={field} className="px-8 py-5 text-white/40 text-xs font-mono">
+                                    {formatCellValue(field, val)}
+                                </td>
+                            );
+                        })}
+                      </>
+                    )}
+
+                    <td className="px-8 py-5">
+                      <button className="text-[10px] font-black uppercase text-white/10 group-hover:text-blue-400 transition-all tracking-widest">Detail View</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <div className="p-8 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
           <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">

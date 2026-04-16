@@ -11,8 +11,9 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 const AVAILABLE_FIELDS = [
-  'ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'timestamp', 
-  'test_point', 'flow_rate', 'temperature', 'pressure', 'status', 'Note'
+  'ID Mark', 'Meter Number', 'Lote', 'Lacre', 'Error conclusion', 'Note', 
+  'Save time', 'timestamp', 'test_point', 'flow_rate', 'temperature', 
+  'pressure', 'status', 'data_vinculo', 'tipo', 'cod_lacre'
 ];
 
 interface PathPair {
