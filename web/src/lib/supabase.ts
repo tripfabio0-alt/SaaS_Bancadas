@@ -10,6 +10,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder'
+  supabaseUrl || 'https://dhmrrrftyijttnihurxn.supabase.co', 
+  supabaseAnonKey || 'sb_publishable_g91NIMXeGlYWLevO5GvyQw_XK-g_-Y6'
 );
