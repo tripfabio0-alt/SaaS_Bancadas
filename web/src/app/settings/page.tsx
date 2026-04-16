@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { Save, AlertTriangle, CheckCircle2, Database, Clock, Server, Settings as SettingsIcon, Layout, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
