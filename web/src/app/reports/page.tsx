@@ -214,7 +214,7 @@ export default function ReportsPage() {
                          type="text" 
                          value={searchLote}
                          onChange={(e) => setSearchLote(e.target.value)}
-                         onKeyDown={(e) => e.key === ''Enter'' && fetchGlobalHistory()}
+                         onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
                          placeholder="Filter by Batch..."
                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[10px] font-mono text-white/60 focus:outline-none focus:border-blue-500/40"
                        />
@@ -240,7 +240,7 @@ export default function ReportsPage() {
                             placeholder="Search Meter Serial..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => e.key === ''Enter'' && fetchGlobalHistory()}
+                            onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-white"
                         />
                     </div>
