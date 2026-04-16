@@ -1,38 +1,45 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Save, AlertTriangle, CheckCircle2, Database, Clock, Server, Settings as SettingsIcon, Layout, Eye } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+  Save, AlertTriangle, CheckCircle2, Database, Clock, Server, 
+  Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
+  FolderSearch, RefreshCw, Layers
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 
-const BANCADAS = [1, 2, 3, 4, 5];
 const AVAILABLE_FIELDS = [
   'ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'timestamp', 
   'test_point', 'flow_rate', 'temperature', 'pressure', 'status', 'Note'
 ];
 
-type BancadaPaths = {
+interface PathPair {
   data: string;
   fullData: string;
-};
+}
 
-const defaultPaths: Record<number, BancadaPaths> = Object.fromEntries(
-  BANCADAS.map(id => [
-    id,
-    {
-      data:     `C:\\Users\\User\\Documents\\BD\\database${id}\\Data.accdb`,
-      fullData: `C:\\Users\\User\\Documents\\BD\\database${id}\\Full Data.accdb`,
-    },
-  ])
-);
+interface BenchConfig {
+  id: number;
+  name: string;
+  paths: PathPair[];
+}
+
+interface CSVConfig {
+  path: string;
+  last_sync: string | null;
+}
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
-  const [syncInterval, setSyncInterval] = useState('300');
-  const [paths, setPaths] = useState<Record<number, BancadaPaths>>(defaultPaths);
+  const [loading, setLoading] = useState(true);
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
   const [testPointFilter, setTestPointFilter] = useState('qmax');
-  const [loading, setLoading] = useState(true);
+  
+  // Dynamic Configs
+  const [benches, setBenches] = useState<BenchConfig[]>([]);
+  const [csvConfig, setCsvConfig] = useState<CSVConfig>({ path: '', last_sync: null });
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -47,6 +54,8 @@ export default function SettingsPage() {
         if (data) {
           setVisibleFields(data.admin_settings?.visible_fields || []);
           setTestPointFilter(data.report_vars?.default_test_point_filter || 'qmax');
+          setBenches(data.benches_config || []);
+          setCsvConfig(data.csv_config || { path: '', last_sync: null });
         }
       } catch (e) {
         console.error('Error fetching config:', e);
@@ -57,17 +66,49 @@ export default function SettingsPage() {
     fetchConfig();
   }, []);
 
-  const updatePath = (id: number, field: 'data' | 'fullData', value: string) => {
-    setPaths(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value },
-    }));
-  };
-
   const handleToggleField = (field: string) => {
     setVisibleFields(prev => 
       prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]
     );
+  };
+
+  // --- Dynamic Bench Management ---
+  const addBench = () => {
+    const nextId = benches.length > 0 ? Math.max(...benches.map(b => b.id)) + 1 : 1;
+    setBenches([...benches, {
+      id: nextId,
+      name: `Bancada ${nextId}`,
+      paths: [{ data: '', fullData: '' }]
+    }]);
+  };
+
+  const removeBench = (id: number) => {
+    setBenches(benches.filter(b => b.id !== id));
+  };
+
+  const updateBenchName = (id: number, name: string) => {
+    setBenches(benches.map(b => b.id === id ? { ...b, name } : b));
+  };
+
+  const addPathToBench = (benchId: number) => {
+    setBenches(benches.map(b => b.id === benchId ? {
+      ...b,
+      paths: [...b.paths, { data: '', fullData: '' }]
+    } : b));
+  };
+
+  const removePathFromBench = (benchId: number, pathIndex: number) => {
+    setBenches(benches.map(b => b.id === benchId ? {
+      ...b,
+      paths: b.paths.filter((_, i) => i !== pathIndex)
+    } : b));
+  };
+
+  const updatePath = (benchId: number, pathIndex: number, field: keyof PathPair, value: string) => {
+    setBenches(benches.map(b => b.id === benchId ? {
+      ...b,
+      paths: b.paths.map((p, i) => i === pathIndex ? { ...p, [field]: value } : p)
+    } : b));
   };
 
   const handleSave = async () => {
@@ -83,6 +124,8 @@ export default function SettingsPage() {
           report_vars: {
             default_test_point_filter: testPointFilter
           },
+          benches_config: benches,
+          csv_config: csvConfig,
           updated_at: new Date().toISOString()
         })
         .eq('id', 1);
@@ -97,53 +140,48 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-10 pb-20">
-      <header className="flex justify-between items-center">
+    <div className="space-y-10 pb-32">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">SaaS Settings</h1>
-          <p className="text-white/40 mt-2">Manage field visibility, global filters and synchronization.</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight">SaaS Admin Console</h1>
+          <p className="text-white/40 mt-2">Manage benches, partitions, and external data sources.</p>
         </div>
         <div className="flex items-center gap-3">
-           <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">ADMIN MODE</span>
+           <span className="px-4 py-2 rounded-2xl bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20 flex items-center gap-2">
+             <Server size={14} /> ADM CONFIG
+           </span>
         </div>
       </header>
 
-      {/* SaaS Admin Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Field Management */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="lg:col-span-2 glass-card p-6 rounded-3xl border border-white/5 space-y-6"
+           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+           className="lg:col-span-2 glass-card p-8 rounded-[32px] border border-white/5 space-y-6"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
-              <Layout size={20} />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400">
+              <Layout size={24} />
             </div>
             <div>
-              <h2 className="font-bold text-white">Field Management</h2>
-              <p className="text-white/40 text-xs">Toggle which database fields are visible in reports and banch details.</p>
+              <h2 className="text-xl font-bold text-white">Display Intelligence</h2>
+              <p className="text-white/40 text-sm">Select which fields from the industrial databases should be visible.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {AVAILABLE_FIELDS.map(field => (
               <button
                 key={field}
                 onClick={() => handleToggleField(field)}
                 className={cn(
-                  "flex items-center justify-between p-3 rounded-2xl border transition-all group",
+                  "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group",
                   visibleFields.includes(field)
                     ? "bg-indigo-500/10 border-indigo-500/30 text-white"
                     : "bg-white/[0.02] border-white/5 text-white/30 hover:bg-white/[0.05]"
                 )}
               >
-                <div className="flex items-center gap-2 overflow-hidden text-xs font-semibold">
-                  <div className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    visibleFields.includes(field) ? "bg-indigo-400" : "bg-white/10"
-                  )} />
-                  <span className="truncate">{field}</span>
-                </div>
+                <span className="text-xs font-bold truncate">{field}</span>
                 <Eye size={14} className={cn(
                   "shrink-0 transition-opacity",
                   visibleFields.includes(field) ? "opacity-100" : "opacity-20 group-hover:opacity-100"
@@ -153,109 +191,195 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
+        {/* Global Variables */}
         <motion.div
-           initial={{ opacity: 0, scale: 0.95 }}
-           animate={{ opacity: 1, scale: 1 }}
-           className="glass-card p-6 rounded-3xl border border-white/5 space-y-6"
+           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+           className="glass-card p-8 rounded-[32px] border border-white/5 space-y-6"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
-              <SettingsIcon size={20} />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+              <SettingsIcon size={24} />
             </div>
-            <div>
-              <h2 className="font-bold text-white">Global Variables</h2>
-              <p className="text-white/40 text-xs">Configure system-wide filter defaults.</p>
-            </div>
+            <h2 className="text-xl font-bold text-white">Global Vars</h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Default Test Point</label>
+              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Primary Test Filter</label>
               <input 
                 type="text"
                 value={testPointFilter}
                 onChange={e => setTestPointFilter(e.target.value)}
                 placeholder="e.g. qmax"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white/80"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-white"
               />
-              <p className="text-[10px] text-white/20 mt-2">Used to filter Consolidated reports by default.</p>
             </div>
             
-            <div className="pt-4 border-t border-white/5">
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/30 uppercase">SaaS License</span>
-                    <span className="text-emerald-400 font-bold">LIFETIME PRO</span>
+            <div className="p-6 bg-white/[0.02] rounded-3xl border border-white/5">
+                <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-white/30 uppercase">Enterprise Key</span>
+                    <span className="text-emerald-400 font-bold">ACTIVE</span>
                 </div>
+                <div className="text-[10px] text-white/10 italic">Valid until April 2027</div>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Sync Configuration (Lower Priority now) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-4 pt-10 border-t border-white/5"
+      {/* External Data Source: Vinculo de Lacres */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="glass-card p-8 rounded-[40px] border border-white/5 space-y-6"
       >
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 rounded-xl bg-blue-500/10">
-            <Database size={20} className="text-blue-400" />
-          </div>
-          <div>
-            <h2 className="font-bold text-white">Sync Bridge Paths</h2>
-            <p className="text-white/40 text-xs">Reference of Access database locations for the synchronization script.</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
+              <FileText size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Vinculo de Lacres</h2>
+              <p className="text-white/40 text-sm">Path to the third-party CSV file for batch and seal relationship.</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {BANCADAS.map((id, i) => (
-            <div key={id} className="glass-card p-5 rounded-2xl flex flex-col md:flex-row gap-6">
-                <div className="flex items-center gap-2 shrink-0">
-                    <span className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
-                        {id}
-                    </span>
-                    <span className="font-semibold text-white/80 whitespace-nowrap">Bancada {id}</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                    <div>
-                        <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest block mb-1">Data Path</span>
-                        <div className="bg-white/[0.02] p-2 rounded-lg border border-white/5 font-mono text-xs text-white/40 truncate">{paths[id].data}</div>
-                    </div>
-                    <div>
-                        <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest block mb-1">Full Data Path</span>
-                        <div className="bg-white/[0.02] p-2 rounded-lg border border-white/5 font-mono text-xs text-white/40 truncate">{paths[id].fullData}</div>
-                    </div>
-                </div>
-            </div>
-          ))}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <FolderSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" size={20} />
+            <input 
+              type="text"
+              value={csvConfig.path}
+              onChange={e => setCsvConfig({ ...csvConfig, path: e.target.value })}
+              placeholder="C:\Users\User\Downloads\Relatorio.csv"
+              className="w-full bg-white/5 border border-white/10 rounded-3xl py-5 pl-16 pr-6 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all font-mono text-white/60"
+            />
+          </div>
+          <div className="flex items-center gap-3 px-6 py-4 bg-white/[0.02] border border-white/5 rounded-3xl">
+             <Clock size={16} className="text-white/20" />
+             <div>
+               <div className="text-[9px] text-white/20 uppercase font-bold">Last CSV Sync</div>
+               <div className="text-xs text-white/40">{csvConfig.last_sync || 'Never'}</div>
+             </div>
+          </div>
         </div>
-      </motion.div>
+      </motion.section>
+
+      {/* Dynamic Bench Management */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
+              <Layers size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Benches & Multi-Partitions</h2>
+              <p className="text-white/40 text-sm">Configure physical benched and their local database paths.</p>
+            </div>
+          </div>
+          <button 
+            onClick={addBench}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/20"
+          >
+            <Plus size={18} /> New Bench
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
+          <AnimatePresence>
+            {benches.map((bench) => (
+              <motion.div 
+                key={bench.id}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="glass-card p-8 rounded-[40px] border border-white/5 space-y-6 relative overflow-hidden"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-6">
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <span className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-blue-400 font-mono font-bold text-xl">
+                      {bench.id}
+                    </span>
+                    <input 
+                      type="text"
+                      value={bench.name}
+                      onChange={e => updateBenchName(bench.id, e.target.value)}
+                      className="bg-transparent border-none text-2xl font-bold text-white focus:outline-none focus:ring-0 w-full"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => removeBench(bench.id)}
+                    className="p-3 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-2xl transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {bench.paths.map((p, idx) => (
+                    <div key={idx} className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4 relative group">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-2">Data Path (Main)</label>
+                          <input 
+                            type="text"
+                            value={p.data}
+                            onChange={e => updatePath(bench.id, idx, 'data', e.target.value)}
+                            className="w-full bg-black/20 border border-white/5 rounded-2xl py-4 px-5 text-xs font-mono text-white/50 focus:border-blue-500/30 transition-all"
+                            placeholder="C:\...\Data.accdb"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-2">Full Data Path (Technical)</label>
+                          <input 
+                            type="text"
+                            value={p.fullData}
+                            onChange={e => updatePath(bench.id, idx, 'fullData', e.target.value)}
+                            className="w-full bg-black/20 border border-white/5 rounded-2xl py-4 px-5 text-xs font-mono text-white/50 focus:border-blue-500/30 transition-all"
+                            placeholder="C:\...\Full Data.accdb"
+                          />
+                        </div>
+                      </div>
+                      {bench.paths.length > 1 && (
+                        <button 
+                          onClick={() => removePathFromBench(bench.id, idx)}
+                          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <button 
+                    onClick={() => addPathToBench(bench.id)}
+                    className="flex items-center gap-2 text-xs font-bold text-blue-400/60 hover:text-blue-400 transition-all px-4"
+                  >
+                    <Plus size={14} /> Add Partition / Path
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </section>
 
       {/* Save Button Floating */}
-      <div className="fixed bottom-10 right-10 z-50">
+      <div className="fixed bottom-12 right-12 z-[100]">
         <button
           onClick={handleSave}
           disabled={loading}
-          className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-base shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+          className={`flex items-center gap-3 px-10 py-5 rounded-[24px] font-bold text-lg shadow-2xl transition-all duration-500 transform hover:scale-105 active:scale-95 ${
             saved
               ? 'bg-emerald-500 text-white'
-              : 'bg-white text-black hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+              : 'bg-white text-black hover:shadow-[0_0_30px_rgba(59,130,246,0.4)]'
           } disabled:opacity-50`}
         >
-          {loading ? <RefreshCw className="animate-spin" size={20} /> : saved ? <><CheckCircle2 size={20} /> Changes Applied!</> : <><Save size={20} /> Update System Config</>}
+          {loading ? <RefreshCw className="animate-spin" size={24} /> : saved ? <><CheckCircle2 size={24} /> Configuration Updated!</> : <><Save size={24} /> Save All Changes</>}
         </button>
       </div>
 
-      {/* Help Tip */}
-      <div className="flex items-center justify-center gap-2 text-white/20 text-xs">
+      <div className="flex items-center justify-center gap-3 text-white/10 text-xs pb-10">
           <Clock size={14} />
-          Last system update: {new Date().toLocaleString()}
+          Universal Architecture Sync v6.0 Ready
       </div>
     </div>
   );
 }
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
-import { RefreshCw } from 'lucide-react';

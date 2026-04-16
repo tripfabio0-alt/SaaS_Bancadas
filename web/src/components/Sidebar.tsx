@@ -1,24 +1,47 @@
 "use client";
 
 import Link from 'next/link';
-import { LayoutDashboard, Database, Activity, Settings, HelpCircle, GitCommit } from 'lucide-react';
+import { LayoutDashboard, Database, Activity, Settings, HelpCircle, GitCommit, ListFilter } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
+import { supabase } from '@/lib/supabase';
 
-const BANCADAS = [
-  { id: 1, name: 'Bancada 1' },
-  { id: 2, name: 'Bancada 2' },
-  { id: 3, name: 'Bancada 3' },
-  { id: 4, name: 'Bancada 4' },
-  { id: 5, name: 'Bancada 5' },
-];
+interface BenchConfig {
+  id: number;
+  name: string;
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [benches, setBenches] = useState<BenchConfig[]>([]);
+
+  useEffect(() => {
+    async function fetchBenches() {
+      const { data } = await supabase
+        .from('app_config')
+        .select('benches_config')
+        .eq('id', 1)
+        .single();
+      
+      if (data?.benches_config) {
+        setBenches(data.benches_config);
+      }
+    }
+    fetchBenches();
+
+    // Opcional: Realtime para atualizar o menu se os nomes mudarem
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config' }, fetchBenches)
+      .subscribe();
+
+    return () => { channel.unsubscribe(); };
+  }, []);
 
   return (
-    <div className="w-64 h-screen glass-card border-r border-white/10 flex flex-col fixed left-0 top-0">
+    <div className="w-64 h-screen glass-card border-r border-white/10 flex flex-col fixed left-0 top-0 z-50">
       {/* Logo */}
       <div className="p-6 border-b border-white/5">
         <h1 className="text-2xl font-bold gradient-text">SaaS Bancadas</h1>
@@ -26,7 +49,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
         <Link
           href="/"
           className={cn(
@@ -50,14 +73,17 @@ export default function Sidebar() {
           )}
         >
           <Activity size={20} />
-          <span className="font-medium">Reports</span>
+          <span className="font-medium">Global Union</span>
         </Link>
 
-        <div className="pt-6 pb-2">
-          <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Test Benches</p>
+        <div className="pt-6 pb-2 flex items-center justify-between px-4">
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Test Benches</p>
+          <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
         </div>
 
-        {BANCADAS.map((bench) => (
+        {benches.length === 0 ? (
+           <div className="px-4 py-2 text-[10px] text-white/20 italic italic">Loading benches...</div>
+        ) : benches.map((bench) => (
           <Link
             key={bench.id}
             href={`/bancada/${bench.id}`}
@@ -69,7 +95,7 @@ export default function Sidebar() {
             )}
           >
             <Database size={18} />
-            <span className="font-medium">{bench.name}</span>
+            <span className="font-medium truncate">{bench.name}</span>
           </Link>
         ))}
       </nav>

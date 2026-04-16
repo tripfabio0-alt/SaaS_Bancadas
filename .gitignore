@@ -22,3 +22,5 @@ Thumbs.db
 scratch/
 .claude/
 sync/sync_state.json
+sync/sync_log.txt
+*.accdb

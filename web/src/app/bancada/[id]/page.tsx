@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Database, Search, Filter, Download, ArrowLeft, MoreVertical, RefreshCw } from 'lucide-react';
+import { Database, Search, Filter, Download, ArrowLeft, MoreVertical, RefreshCw, StickyNote, Hash } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -15,10 +15,9 @@ type BenchStatus = 'Online' | 'Idle' | 'Offline';
 
 function getBenchStatus(lastSyncAt: string | null): BenchStatus {
   if (!lastSyncAt) return 'Offline';
-  // Comparar sync_at (quando foi sincronizado) e NÃO o timestamp original do dado
   const diffMinutes = (Date.now() - new Date(lastSyncAt).getTime()) / (1000 * 60);
-  if (diffMinutes < 15) return 'Online';
-  if (diffMinutes < 120) return 'Idle';
+  if (diffMinutes < 30) return 'Online';
+  if (diffMinutes < 180) return 'Idle';
   return 'Offline';
 }
 
@@ -32,17 +31,20 @@ export default function BenchDetail() {
   const [totalCount, setTotalCount] = useState(0);
   const [benchStatus, setBenchStatus] = useState<BenchStatus>('Offline');
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
+  const [benchName, setBenchName] = useState(`Bancada ${id}`);
 
   const fetchConfig = async () => {
     try {
       const { data, error } = await supabase
         .from('app_config')
-        .select('admin_settings')
+        .select('*')
         .eq('id', 1)
         .single();
       
       if (data) {
         setVisibleFields(data.admin_settings?.visible_fields || []);
+        const currentBench = data.benches_config?.find((b: any) => b.id === Number(id));
+        if (currentBench) setBenchName(currentBench.name);
       }
     } catch (e) {
       console.error('Error fetching field config:', e);
@@ -51,32 +53,16 @@ export default function BenchDetail() {
 
   const exportToCSV = () => {
     if (data.length === 0) return;
-    
-    // Pegar apenas os campos visíveis ou todos se nenhum configurado
-    const headers = visibleFields.length > 0 
-        ? visibleFields.filter(f => Object.keys(data[0]).includes(f))
-        : Object.keys(data[0]);
-        
-    const csvRows = [];
-    
-    // Header
-    csvRows.push(headers.join(';'));
-    
-    // Data
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(';')];
     for (const row of data) {
-      const values = headers.map(header => {
-        const val = row[header];
-        const escaped = ('' + val).replace(/"/g, '""');
-        return `"${escaped}"`;
-      });
-      csvRows.push(values.join(';'));
+      csvRows.push(headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(';'));
     }
-    
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `bancada_${id}_${activeTab.toLowerCase().replace(' ', '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `bancada_${id}_${activeTab.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,22 +79,19 @@ export default function BenchDetail() {
       if (visibleFields.length === 0) await fetchConfig();
       
       const isConsolidated = activeTab === 'Consolidated';
-      const tableName = isConsolidated ? 'consolidated_data' : (activeTab === 'Data' ? 'data' : 'full_data');
-      
-      // Se timestamp estiver nulo/inválido, o Postgres coloca no topo/fundo.
-      // Vamos tentar ordenar por timestamp mas cair para id se necessário.
-      const orderColumn = isConsolidated ? 'main_timestamp' : (activeTab === 'Data' ? 'timestamp' : 'sync_at');
+      // MIGRATION: consolidated_data -> global_uniao
+      const tableName = isConsolidated ? 'global_uniao' : (activeTab === 'Data' ? 'data' : 'full_data');
+      const orderColumn = 'timestamp';
       
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-
       const bancadaIdNum = Number(id);
 
       let query = supabase
         .from(tableName as any)
         .select('*', { count: 'exact' })
         .eq('bancada_id', bancadaIdNum)
-        .order(orderColumn as any, { ascending: false, nullsFirst: false })
+        .order(orderColumn as any, { ascending: false })
         .range(from, to);
 
       const [{ data: result, error, count }, statusRes] = await Promise.all([
@@ -121,16 +104,11 @@ export default function BenchDetail() {
           .limit(1),
       ]);
 
-      if (error) {
-        console.error(`ERROR_FETCHING_${tableName.toUpperCase()}:`, error);
-        throw error;
-      }
+      if (error) throw error;
 
       setData(result || []);
       setTotalCount(count || 0);
-
-      const latest = statusRes.data?.[0];
-      setBenchStatus(getBenchStatus(latest?.sync_at ?? null));
+      setBenchStatus(getBenchStatus(statusRes.data?.[0]?.sync_at || null));
     } catch (err: any) {
       console.error('FETCH_BENCH_DETAILS_CRITICAL:', err);
       setData([]);
@@ -153,23 +131,23 @@ export default function BenchDetail() {
   const hasNext = page < totalPages - 1;
 
   return (
-    <div className="space-y-8 pb-20">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/60 hover:text-white">
-            <ArrowLeft size={18} />
+    <div className="space-y-8 pb-32">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+          <Link href="/" className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white">
+            <ArrowLeft size={20} />
           </Link>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-white">Bancada {id}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-4xl font-bold text-white tracking-tighter">{benchName}</h1>
               <span className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                benchStatus === 'Online' ? "bg-green-500/10 text-green-400 border-green-500/20" :
-                benchStatus === 'Idle' ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" :
-                "bg-red-500/10 text-red-400 border-red-500/20"
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg",
+                benchStatus === 'Online' ? "bg-green-500 text-black border-green-400" :
+                benchStatus === 'Idle' ? "bg-yellow-500 text-black border-yellow-400" :
+                "bg-red-500 text-white border-red-400"
               )}>{benchStatus}</span>
             </div>
-            <p className="text-white/40 text-sm mt-1">Detailed database records for monitoring and analysis.</p>
+            <p className="text-white/30 text-sm mt-1 uppercase tracking-widest font-bold text-[10px]">Industrial Data Node #{id}</p>
           </div>
         </div>
 
@@ -177,31 +155,30 @@ export default function BenchDetail() {
           <button 
             onClick={() => fetchData(page)}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/80 hover:bg-white/10 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white/80 hover:bg-white/10 transition-all text-sm font-bold disabled:opacity-50"
           >
-            <RefreshCw size={14} className={cn(loading && "animate-spin")} /> {loading ? 'Syncing...' : 'Sync Now'}
+            <RefreshCw size={16} className={cn(loading && "animate-spin")} /> {loading ? 'UPDATING...' : 'SYNC REFRESH'}
           </button>
           <button 
             onClick={exportToCSV}
             disabled={loading || data.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 hover:bg-blue-500/20 transition-all text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center gap-3 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white transition-all text-sm font-bold shadow-lg shadow-blue-500/10"
           >
-            <Download size={14} /> Export CSV
+            <Download size={16} /> EXPORT CSV
           </button>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
       <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/5 rounded-2xl w-fit">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
+              "px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300",
               activeTab === tab 
-                ? "bg-white text-black shadow-lg" 
-                : "text-white/40 hover:text-white/60"
+                ? "bg-white text-black shadow-xl" 
+                : "text-white/20 hover:text-white/50"
             )}
           >
             {tab}
@@ -209,180 +186,120 @@ export default function BenchDetail() {
         ))}
       </div>
 
-      {/* Table Controls */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/[0.02] p-4 rounded-[32px] border border-white/5">
+        <div className="relative w-full md:w-[450px]">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" size={18} />
           <input 
             type="text" 
-            placeholder={`Search in ${activeTab}...`} 
+            placeholder={`Deep search in ${activeTab}...`} 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all placeholder:text-white/20 text-white"
+            className="w-full bg-black/20 border border-white/5 rounded-2xl py-4 pl-16 pr-6 text-sm focus:outline-none focus:border-blue-500/40 transition-all font-mono text-white/60"
           />
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white/60 hover:text-white transition-all text-sm">
+        <div className="flex gap-3 w-full md:w-auto">
+          <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white/40 text-xs font-bold uppercase tracking-widest transition-all">
             <Filter size={16} /> Filters
-          </button>
-          <button className="p-3 bg-white/5 border border-white/10 rounded-2xl text-white/60 hover:text-white transition-all">
-            <MoreVertical size={18} />
           </button>
         </div>
       </div>
 
-      {/* Data Table Mockup */}
-      <div className="glass-card rounded-3xl overflow-hidden min-h-[500px] border border-white/5 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-        
-        <table className="w-full text-left relative z-10">
-          <thead className="border-b border-white/5">
+      <div className="glass-card rounded-[40px] overflow-hidden border border-white/5 relative">
+        <table className="w-full text-left">
+          <thead className="border-b border-white/5 bg-white/[0.02]">
             <tr>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">ID Mark</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
               {activeTab === 'Data' ? (
                 <>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Meter Number</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Error conclusion</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Save time</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Number</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Conclusion</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Obs (Note)</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Save Time</th>
                 </>
               ) : activeTab === 'Full Data' ? (
                 <>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Technical Data (JSON)</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Captured At</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">JSON Payload</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Sync At</th>
                 </>
               ) : (
                 <>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Meter Name</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Point (qmax)</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Tech Metrics</th>
-                  <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Sync At</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Name</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Lote (CSV)</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Tech Metrics</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Timestamp</th>
                 </>
               )}
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Sync Status</th>
-              <th className="px-6 py-5 text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Action</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-24 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="relative">
-                      <div className="w-12 h-12 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-                      <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full animate-pulse" />
-                    </div>
-                    <p className="text-white/40 text-sm font-medium tracking-wide">Retrieving secure bench data...</p>
-                  </div>
+                <td colSpan={6} className="px-8 py-32 text-center">
+                   <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4 opacity-20" />
+                   <p className="text-white/20 font-bold tracking-widest text-xs uppercase">Pulling Datastream...</p>
                 </td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-20 text-center">
-                  <div className="flex flex-col items-center gap-2 text-white/20">
-                    <Database size={40} strokeWidth={1} />
-                    <p>No records match your search.</p>
-                  </div>
-                </td>
+                <td colSpan={6} className="px-8 py-20 text-center text-white/10 italic">No records found.</td>
               </tr>
             ) : (
               filteredData.map((item: any, i: number) => (
-                <tr key={item.id || item.data_id || i} className="hover:bg-white/[0.01] transition-colors group">
-                  <td className="px-6 py-5">
-                    <span className="font-mono text-blue-400">
-                      {item['ID Mark'] || item['id_mark'] || item['id mark'] || '-'}
-                    </span>
+                <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
+                  <td className="px-8 py-5">
+                    <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || item['id_mark'] || '-'}</span>
                   </td>
                   
                   {activeTab === 'Data' ? (
                     <>
-                      <td className="px-6 py-5 text-white/60 font-semibold">
-                        {item['Meter Number'] || item['meter_number'] || item['meter number'] || '-'}
+                      <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
+                      <td className="px-8 py-5">
+                         <span className={cn(
+                             "px-2 py-0.5 rounded-md text-[10px] font-bold",
+                             item['Error conclusion'] === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                         )}>
+                           {item['Error conclusion'] || '-'}
+                         </span>
                       </td>
-                      <td className="px-6 py-5 font-semibold text-white/80">
-                        {item['Error conclusion'] || item['error_conclusion'] || item['error conclusion'] || '-'}
+                      <td className="px-8 py-5 text-white/30 text-[10px]">
+                         {item.note ? <div className="flex items-center gap-2"><StickyNote size={12} className="text-amber-500" /> {item.note}</div> : '-'}
                       </td>
-                      <td className="px-6 py-5 text-white/40 text-sm italic">
-                        {item['Save time'] || item['save_time'] || item['save time'] || '-'}
-                      </td>
+                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || '-'}</td>
                     </>
                   ) : activeTab === 'Full Data' ? (
                     <>
-                      <td className="px-6 py-5">
-                        <div className="max-w-md">
-                          <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 font-mono text-[11px] leading-relaxed group-hover:bg-white/[0.05] transition-colors overflow-hidden">
-                            <span className="text-blue-400">{'{'}</span>
-                            <div className="pl-4">
-                              {(() => {
-                                try {
-                                  const payload = typeof item.raw_payload === 'string' 
-                                    ? JSON.parse(item.raw_payload) 
-                                    : item.raw_payload;
-                                  
-                                  if (!payload) return <span className="text-white/20 italic">Empty payload</span>;
-
-                                  // Pegar apenas as primeiras 4 chaves para manter compacto
-                                  const keys = Object.keys(payload);
-                                  const preview = keys.slice(0, 4).map(k => (
-                                    <div key={k} className="truncate">
-                                      <span className="text-white/40">"{k}":</span>{" "}
-                                      <span className="text-emerald-400">"{String(payload[k])}"</span>
-                                    </div>
-                                  ));
-                                  return (
-                                    <>
-                                      {preview}
-                                      {keys.length > 4 && <div className="text-white/20 italic mt-1">... and {keys.length - 4} more fields</div>}
-                                    </>
-                                  );
-                                } catch (e) {
-                                  return <span className="text-red-400/60">JSON Parse Error</span>;
-                                }
-                              })()}
-                            </div>
-                            <span className="text-blue-400">{'}'}</span>
-                          </div>
+                      <td className="px-8 py-5">
+                        <div className="bg-black/20 border border-white/5 rounded-xl p-3 font-mono text-[10px] text-white/40 max-w-sm truncate">
+                          {JSON.stringify(item.raw_payload || item)}
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-white/40 text-sm font-mono">
-                        {item['timestamp'] || item['sync_at'] ? new Date(item['timestamp'] || item['sync_at']).toLocaleString() : '-'}
+                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
+                        {new Date(item.sync_at).toLocaleString()}
                       </td>
                     </>
                   ) : (
                     <>
-                      <td className="px-6 py-5 text-white/60 font-semibold">
-                        {item['Meter Number'] || '-'}
+                      <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
+                      <td className="px-8 py-5">
+                        <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md text-[10px] font-bold border border-indigo-500/10">
+                           {item.lote || 'No Link'}
+                        </span>
                       </td>
-                      <td className="px-6 py-5">
-                         <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 uppercase">
-                           {item['test_point'] || 'qmax'}
-                         </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col gap-1 text-[11px]">
-                           <div className="flex justify-between gap-4">
-                             <span className="text-white/30 uppercase">Flow:</span>
-                             <span className="text-white/70 font-mono">{item['flow_rate'] || 'N/A'}</span>
-                           </div>
-                           <div className="flex justify-between gap-4">
-                             <span className="text-white/30 uppercase">Temp:</span>
-                             <span className="text-white/70 font-mono">{item['temperature'] || 'N/A'}</span>
-                           </div>
+                      <td className="px-8 py-5">
+                        <div className="flex gap-4 text-[10px] font-bold uppercase">
+                           <span className="text-white/20">Point: <span className="text-white/60">{item.test_point || 'qmax'}</span></span>
+                           <span className="text-white/20">Rate: <span className="text-white/60">{item.flow_rate || 'N/A'}</span></span>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-white/40 text-[10px] font-mono whitespace-nowrap">
-                        {item['last_sync'] ? new Date(item['last_sync']).toLocaleString() : '-'}
+                      <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
+                        {new Date(item.timestamp).toLocaleString()}
                       </td>
                     </>
                   )}
 
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
-                      <span className="text-xs font-medium text-white/60">Synced</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <button className="text-xs font-bold text-white/20 group-hover:text-white/60 hover:!text-white transition-all underline decoration-white/0 underline-offset-4 hover:decoration-white/10 uppercase tracking-tighter">View Raw</button>
+                  <td className="px-8 py-5">
+                    <button className="text-[10px] font-black uppercase text-white/10 group-hover:text-blue-400 transition-all tracking-widest">Detail View</button>
                   </td>
                 </tr>
               ))
@@ -390,22 +307,21 @@ export default function BenchDetail() {
           </tbody>
         </table>
 
-        {/* Empty State / Pagination placeholder */}
-        <div className="p-6 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
-          <p className="text-sm text-white/20">
-            {loading ? 'Calculating...' : `Showing ${data.length} of ${totalCount.toLocaleString()} records — Page ${page + 1} of ${totalPages || 1}`}
+        <div className="p-8 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
+          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+            {totalCount.toLocaleString()} Total Records • Page {page + 1}/{totalPages || 1}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => setPage(p => p - 1)}
               disabled={!hasPrev || loading}
-              className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-sm transition-all disabled:text-white/20 disabled:cursor-not-allowed text-white/60 enabled:hover:text-white enabled:hover:bg-white/10"
-            >Previous</button>
+              className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase transition-all disabled:opacity-20 text-white/60 hover:text-white"
+            >Back</button>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={!hasNext || loading}
-              className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm transition-all disabled:text-white/20 disabled:cursor-not-allowed text-white/60 enabled:hover:text-white enabled:hover:bg-white/10"
-            >Next Page</button>
+              className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase transition-all disabled:opacity-20 text-white/60 hover:text-white"
+            >Load Next</button>
           </div>
         </div>
       </div>
