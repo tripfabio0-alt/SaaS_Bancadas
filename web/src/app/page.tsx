@@ -75,17 +75,24 @@ export default function Home() {
 
         const fetchTotal = async () => {
           try {
+            // Usando count: 'estimated' para bancos muito grandes se necessário,
+            // mas 'exact' com select head: true geralmente funciona bem no Supabase.
             const { count, error } = await supabase
               .from('data')
               .select('*', { count: 'exact', head: true });
+            
             if (error) {
               console.error('FETCH_TOTAL_ERROR:', error);
-              throw error;
+              // Fallback para uma contagem simples se o exato falhar por timeout
+              const { count: fallbackCount } = await supabase
+                .from('data')
+                .select('id', { count: 'estimated', head: true });
+              return fallbackCount || 0;
             }
             return count || 0;
           } catch (e) {
-            console.error('TOTAL_RECORDS_MIGRATION_ERROR:', e);
-            return 0; // Mostrar 0 faz o erro ser percebido, o fallback escondia a falha
+            console.error('TOTAL_RECORDS_FETCH_CRITICAL:', e);
+            return 0;
           }
         };
 

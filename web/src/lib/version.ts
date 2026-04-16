@@ -1,5 +1,4 @@
-// Versão atual do SaaS Bancadas
-export const APP_VERSION = '1.5.0';
+export const APP_VERSION = '1.6.5';
 export const APP_BUILD_DATE = '2026-04-15';
 
 export interface VersionEntry {

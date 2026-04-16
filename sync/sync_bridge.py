@@ -107,6 +107,10 @@ def sync_file(db_path, bancada_id):
         
         for table_name in tables:
             try:
+                # Se for o banco técnico, focamos apenas na tabela correspondente
+                if is_full_data_file and table_name.lower() not in ['full data', 'data', 'table1']:
+                     continue
+                
                 query = f"SELECT * FROM [{table_name}]"
                 df = pd.read_sql(query, conn)
                 if df.empty:
