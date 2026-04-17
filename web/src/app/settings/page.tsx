@@ -5,7 +5,7 @@ import {
   Save, AlertTriangle, CheckCircle2, Database, Clock, Server, 
   Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
   RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare,
-  Lock, Unlock, Shield, EyeOff
+  Lock, Unlock, Shield, EyeOff, Monitor, FileImage, Cpu
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -229,7 +229,7 @@ export default function SettingsPage() {
           <p className="text-[#dae2fd] opacity-40 mt-2 max-w-2xl font-body">Manage industrial infrastructure, data pipelines, and system-wide visibility metrics.</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary">
-          <span className="material-symbols-outlined text-sm">lock</span>
+          <Lock size={14} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Secure Session Active</span>
         </div>
       </header>
@@ -299,12 +299,12 @@ export default function SettingsPage() {
           {/* External Assets Manager */}
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-6">
             <h3 className="text-xl font-bold font-headline text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-brand-primary">branding_watermark</span>
+              <Monitor size={20} className="text-brand-primary" />
               Logo Upload
             </h3>
             <div className="border-2 border-dashed border-outline-variant/20 rounded-2xl p-10 flex flex-col items-center justify-center bg-surface-highest/10 hover:bg-surface-highest/20 transition-all group cursor-pointer">
                <div className="w-24 h-24 bg-surface-high rounded-xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform border border-outline-variant/10 shadow-lg">
-                  <span className="material-symbols-outlined text-white opacity-20 text-4xl">image</span>
+                  <FileImage size={48} className="text-white opacity-20" />
                </div>
                <p className="text-sm font-bold text-white mb-2">Industrial_Bench_v2_Logo.svg</p>
                <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase tracking-widest">Recommended: Vector (SVG)</p>
@@ -320,7 +320,7 @@ export default function SettingsPage() {
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-8">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-bold font-headline text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-brand-primary">precision_manufacturing</span>
+                <Cpu size={20} className="text-brand-primary" />
                 Bench Nodes
               </h3>
             </div>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
           {/* Sync Latency */}
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-6">
             <h3 className="text-lg font-bold font-headline text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-brand-primary">sync</span>
+              <RefreshCw size={18} className="text-brand-primary" />
               Datalogger Latency
             </h3>
             <div className="space-y-4">

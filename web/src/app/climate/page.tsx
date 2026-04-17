@@ -16,6 +16,13 @@ import {
   Area
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { 
+  Thermometer, 
+  Droplets, 
+  TrendingDown, 
+  TrendingUp, 
+  History 
+} from 'lucide-react';
 
 export default function ClimatePage() {
   const [data, setData] = useState<any[]>([]);
@@ -107,7 +114,7 @@ export default function ClimatePage() {
           {/* Temperature Card */}
           <div className="bg-surface-mid p-6 rounded-xl border border-brand-primary/10 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <span className="material-symbols-outlined" style={{ fontSize: '80px' }}>device_thermostat</span>
+              <Thermometer size={80} className="text-brand-primary" />
             </div>
             <div className="relative z-10">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#dae2fd] opacity-40 mb-4 block">Average Temp (Lab)</span>
@@ -117,7 +124,7 @@ export default function ClimatePage() {
               </div>
               <div className="mt-8 flex items-center gap-2">
                 <div className="flex items-center gap-1 text-brand-tertiary text-xs font-bold">
-                  <span className="material-symbols-outlined text-xs">trending_down</span>
+                  <TrendingDown size={14} />
                   0.4°
                 </div>
                 <span className="text-[10px] text-[#dae2fd] opacity-30 uppercase font-medium">vs last period</span>
@@ -128,7 +135,7 @@ export default function ClimatePage() {
           {/* Humidity Card */}
           <div className="bg-surface-mid p-6 rounded-xl border border-brand-tertiary/10 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <span className="material-symbols-outlined" style={{ fontSize: '80px' }}>humidity_percentage</span>
+              <Droplets size={80} className="text-brand-tertiary" />
             </div>
             <div className="relative z-10">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#dae2fd] opacity-40 mb-4 block">Average Humidity</span>
@@ -138,7 +145,7 @@ export default function ClimatePage() {
               </div>
               <div className="mt-8 flex items-center gap-2">
                 <div className="flex items-center gap-1 text-brand-error text-xs font-bold">
-                  <span className="material-symbols-outlined text-xs">trending_up</span>
+                  <TrendingUp size={14} />
                   2.1%
                 </div>
                 <span className="text-[10px] text-[#dae2fd] opacity-30 uppercase font-medium">vs last period</span>
@@ -242,7 +249,7 @@ export default function ClimatePage() {
         <div className="col-span-12 bg-surface-mid border border-outline-variant/10 rounded-xl overflow-hidden mt-6">
           <div className="p-6 flex justify-between items-center bg-surface-highest/20 border-b border-outline-variant/10">
             <h3 className="font-bold font-headline text-brand-primary flex items-center gap-2">
-              <span className="material-symbols-outlined text-brand-primary">history</span>
+              <History size={18} />
               Recent Environmental Log
             </h3>
             <button className="text-[10px] font-bold text-brand-primary uppercase tracking-widest hover:bg-brand-primary/10 px-4 py-1.5 rounded-lg border border-brand-primary/20 transition-all">

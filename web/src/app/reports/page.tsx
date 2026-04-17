@@ -11,7 +11,11 @@ import {
   TrendingUp,
   Activity,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Database,
+  CheckCircle2,
+  Zap,
+  Share2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -107,14 +111,14 @@ export default function ReportsPage() {
       {/* KPI Stats Mini-Header */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
         {[
-          { label: 'Synchronized Records', value: reportData.length, icon: 'database', color: 'text-brand-primary' },
-          { label: 'Data Integrity', value: '100%', icon: 'verified', color: 'text-brand-tertiary' },
-          { label: 'Processing Delay', value: '0.4s', icon: 'speed', color: 'text-brand-primary' },
-          { label: 'Consensus Mode', value: 'Direct', icon: 'hub', color: 'text-brand-tertiary' },
+          { label: 'Synchronized Records', value: reportData.length, icon: Database, color: 'text-brand-primary' },
+          { label: 'Data Integrity', value: '100%', icon: CheckCircle2, color: 'text-brand-tertiary' },
+          { label: 'Processing Delay', value: '0.4s', icon: Zap, color: 'text-brand-primary' },
+          { label: 'Consensus Mode', value: 'Direct', icon: Share2, color: 'text-brand-tertiary' },
         ].map((stat, i) => (
           <div key={i} className="bg-surface-mid p-5 rounded-2xl border border-outline-variant/5 flex items-center gap-4 group hover:bg-surface-highest transition-all">
              <div className="w-10 h-10 rounded-xl bg-surface-highest/50 flex items-center justify-center">
-                <span className={cn("material-symbols-outlined", stat.color)} style={{ fontSize: '20px' }}>{stat.icon}</span>
+                <stat.icon size={20} className={stat.color} />
              </div>
              <div>
                 <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest">{stat.label}</p>
