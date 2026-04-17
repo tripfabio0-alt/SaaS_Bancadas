@@ -20,7 +20,8 @@ import {
   Droplets, 
   TrendingDown, 
   TrendingUp, 
-  History 
+  History,
+  Activity
 } from 'lucide-react';
 
 export default function ClimatePage() {
