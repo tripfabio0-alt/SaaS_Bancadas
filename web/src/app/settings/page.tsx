@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { 
   Save, AlertTriangle, CheckCircle2, Database, Clock, Server, 
   Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
-  FolderSearch, RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare,
-  Lock, Unlock, ShieldSecurity, Visibility, VisibilityOff
+  RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare,
+  Lock, Unlock, Shield, EyeOff
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -53,6 +53,7 @@ const DISPLAY_FIELDS = [
 ];
 
 const ADMIN_PIN = "1234";
+const APP_VERSION = "2.0.0";
 
 export default function SettingsPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -164,7 +165,7 @@ export default function SettingsPage() {
           className="bg-surface-mid p-8 rounded-3xl border border-outline-variant/10 w-full max-w-md shadow-2xl relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-6 opacity-5">
-            <ShieldSecurity size={80} className="text-brand-primary" />
+            <Shield size={80} className="text-brand-primary" />
           </div>
 
           <div className="text-center space-y-2 mb-8 relative z-10">
@@ -194,7 +195,7 @@ export default function SettingsPage() {
                   onClick={() => setShowPin(!showPin)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
                 >
-                  {showPin ? <VisibilityOff size={18} /> : <Visibility size={18} />}
+                  {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {authError && (

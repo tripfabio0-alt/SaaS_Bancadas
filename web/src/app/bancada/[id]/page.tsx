@@ -279,7 +279,7 @@ export default function BenchDetail() {
         <div className="p-6 bg-surface-highest/20 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em]">
            <div className="flex items-center gap-6">
               <span className="text-brand-tertiary">Real-time Node Pooling: High</span>
-              <span>Loaded {reportData.length} records</span>
+              <span>Loaded {data.length} records</span>
            </div>
            <div className="flex gap-4">
               <button 
