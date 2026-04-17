@@ -22,12 +22,12 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def map_columns(df, is_full_data=False):
     """Mapeia colunas do Access para o padrão do Supabase com normalização canônica."""
-    # 1. Mapeamento de Meta-dados (Tabela data) - USANDO MINÚSCULAS PARA POSTGRES
+    # 1. Mapeamento de Meta-dados (Tabela data) - USANDO NOMES EXATOS DO BD ATUAL
     metadata_map = {
-        'id_mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
-        'meter_number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
-        'error_conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
-        'save_time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
+        'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
+        'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
+        'Error conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
+        'Save time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
         'note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
     }
     
@@ -77,10 +77,10 @@ def map_columns(df, is_full_data=False):
     if is_full_data:
         # No Full Data, geramos um payload com chaves canônicas + campos originais não mapeados
         df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
-        return df[['id_mark', 'raw_payload']].copy() if 'id_mark' in df.columns else df.copy()
+        return df[['ID Mark', 'raw_payload']].copy() if 'ID Mark' in df.columns else df.copy()
     else:
         # No Data (Main), garantimos apenas os campos de meta-dados necessários
-        required = ['id_mark', 'meter_number', 'error_conclusion', 'save_time', 'note']
+        required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'note']
         for col in required:
             if col not in df.columns:
                 df[col] = None
@@ -131,21 +131,21 @@ def sync_access_file(db_path, bancada_id):
                 df['bancada_id'] = int(bancada_id)
                 df['sync_at'] = datetime.utcnow().isoformat() + 'Z'
 
-                if not is_full_data_file and 'save_time' in df.columns and df['save_time'] is not None:
+                if not is_full_data_file and 'Save time' in df.columns:
                     try:
-                        df['timestamp'] = pd.to_datetime(df['save_time']).dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                        df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
                     except Exception:
                         df['timestamp'] = df['sync_at']
                 
-                if 'id_mark' in df.columns:
-                    df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['id_mark'].astype(str)
+                if 'ID Mark' in df.columns:
+                    df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['ID Mark'].astype(str)
                 
                 # Incremental
                 table_state_key = f"{state_key}_{table_name}"
                 seen_ids = set(state.get(table_state_key, []))
                 
-                if 'id_mark' in df.columns:
-                    df_new = df[~df['id_mark'].astype(str).isin(seen_ids)]
+                if 'ID Mark' in df.columns:
+                    df_new = df[~df['ID Mark'].astype(str).isin(seen_ids)]
                     if df_new.empty: continue
                     
                     print(f"   [Bancada {bancada_id}] Sincronizando {len(df_new)} novos registros de '{table_name}'...")
@@ -153,7 +153,7 @@ def sync_access_file(db_path, bancada_id):
                     for i in range(0, len(records), 300):
                         supabase.table(target_table).upsert(records[i:i+300], on_conflict='composite_id').execute()
                     
-                    state[table_state_key] = list(seen_ids.union(set(df_new['id_mark'].astype(str).tolist())))
+                    state[table_state_key] = list(seen_ids.union(set(df_new['ID Mark'].astype(str).tolist())))
                     save_state(state)
                 
             except Exception as e:
@@ -207,7 +207,7 @@ def sync_relatorio_csv(csv_path):
 
 def main():
     print("=" * 60)
-    print("  Sincronizador Universal SaaS Bancadas v8.0")
+    print("  Sincronizador Universal SaaS Bancadas v9.0")
     print("=" * 60)
 
     while True:
