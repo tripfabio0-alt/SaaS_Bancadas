@@ -2,28 +2,48 @@
 
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Database, Search, Filter, Download, ArrowLeft, MoreVertical, RefreshCw, StickyNote, Hash } from 'lucide-react';
+import { 
+  Database, 
+  Search, 
+  Download, 
+  ArrowLeft, 
+  RefreshCw, 
+  StickyNote, 
+  Layers,
+  Activity,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { format } from 'date-fns';
 
-const TABS = ['Data', 'Full Data', 'Consolidated'];
+const TABS = ['Consolidated Data', 'Primary Logs', 'Technical Payload'];
 const PAGE_SIZE = 100;
+
+const FIELD_LABELS: Record<string, string> = {
+  'meter_number': 'Meter Serial',
+  'lote_produto': 'Lote (CSV)',
+  'lacre': 'Lacre',
+  'status_resultado': 'Conclusion Status',
+  'observacao': 'Obs/Notes',
+  'data_hora': 'Timestamp',
+  'ponto_teste': 'Test Point',
+  'vazao_real': 'Flow Rate',
+  'erro_relativo': 'Rel. Error',
+  'temperatura_celcius': 'Labtemperature',
+  'pressao_pa': 'Labpressure',
+  'umidade_percentual': 'Humidity',
+  'id_mark_bancada': 'Node ID Mark'
+};
 
 type BenchStatus = 'Online' | 'Idle' | 'Offline';
 
-function getBenchStatus(lastSyncAt: string | null): BenchStatus {
-  if (!lastSyncAt) return 'Offline';
-  const diffMinutes = (Date.now() - new Date(lastSyncAt).getTime()) / (1000 * 60);
-  if (diffMinutes < 30) return 'Online';
-  if (diffMinutes < 180) return 'Idle';
-  return 'Offline';
-}
-
 export default function BenchDetail() {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState('Data');
+  const [activeTab, setActiveTab] = useState('Consolidated Data');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,83 +55,49 @@ export default function BenchDetail() {
 
   const fetchConfig = async () => {
     try {
-      const { data, error } = await supabase
-        .from('app_config')
-        .select('*')
-        .eq('id', 1)
-        .single();
-      
+      const { data } = await supabase.from('app_config').select('*').eq('id', 1).single();
       if (data) {
-        setVisibleFields(data.admin_settings?.visible_fields || []);
+        setVisibleFields(data.admin_settings?.visible_fields || ['meter_number', 'lote_produto', 'status_resultado', 'data_hora']);
         const currentBench = data.benches_config?.find((b: any) => b.id === Number(id));
         if (currentBench) setBenchName(currentBench.name);
       }
-    } catch (e) {
-      console.error('Error fetching field config:', e);
-    }
+    } catch (e) { console.error(e); }
   };
-
-  const exportToCSV = () => {
-    if (data.length === 0) return;
-    const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(';')];
-    for (const row of data) {
-      csvRows.push(headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(';'));
-    }
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `bancada_${id}_${activeTab.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const filteredData = data.filter(item => {
-    const searchStr = searchTerm.toLowerCase();
-    return Object.values(item).some(val => String(val).toLowerCase().includes(searchStr));
-  });
 
   const fetchData = async (currentPage = page) => {
     setLoading(true);
     try {
       if (visibleFields.length === 0) await fetchConfig();
       
-      const isConsolidated = activeTab === 'Consolidated';
-      // MIGRATION: consolidated_data -> global_uniao
-      const tableName = isConsolidated ? 'global_uniao' : (activeTab === 'Data' ? 'data' : 'full_data');
-      const orderColumn = 'timestamp';
-      
+      const tableName = activeTab === 'Consolidated Data' ? 'global_uniao' : (activeTab === 'Primary Logs' ? 'data' : 'full_data');
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      const bancadaIdNum = Number(id);
 
-      let query = supabase
-        .from(tableName as any)
-        .select('*', { count: 'exact' })
-        .eq('bancada_id', bancadaIdNum)
-        .order(orderColumn as any, { ascending: false })
-        .range(from, to);
-
-      const [{ data: result, error, count }, statusRes] = await Promise.all([
-        query,
+      const [{ data: result, count }, statusRes] = await Promise.all([
+        supabase
+          .from(tableName as any)
+          .select('*', { count: 'exact' })
+          .eq('bancada_id', Number(id))
+          .order('timestamp' as any, { ascending: false })
+          .range(from, to),
         supabase
           .from('data')
           .select('sync_at')
-          .eq('bancada_id', bancadaIdNum)
+          .eq('bancada_id', Number(id))
           .order('sync_at', { ascending: false })
-          .limit(1),
+          .limit(1)
       ]);
-
-      if (error) throw error;
 
       setData(result || []);
       setTotalCount(count || 0);
-      setBenchStatus(getBenchStatus(statusRes.data?.[0]?.sync_at || null));
-    } catch (err: any) {
-      console.error('FETCH_BENCH_DETAILS_CRITICAL:', err);
-      setData([]);
+      
+      const lastSync = statusRes.data?.[0]?.sync_at;
+      if (lastSync) {
+         const diff = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60);
+         setBenchStatus(diff < 30 ? 'Online' : diff < 180 ? 'Idle' : 'Offline');
+      }
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -126,263 +112,190 @@ export default function BenchDetail() {
     fetchData(page);
   }, [page]);
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const hasPrev = page > 0;
-  const hasNext = page < totalPages - 1;
-
-  const FIELD_LABELS: Record<string, string> = {
-    'meter_number': 'Meter Serial',
-    'lote_produto': 'Lote (CSV)',
-    'lacre': 'Lacre',
-    'status_resultado': 'Status',
-    'observacao': 'Notes',
-    'data_hora': 'Test Time',
-    'id_mark_bancada': 'ID Mark',
-    'data_access': 'Access Save',
-    'cod_lacre': 'Cod. Lacre',
-    'seq_lote': 'Seq. Lote',
-    'csv_data_vinculo': 'Vinc. Date',
-    'csv_tipo': 'CSV Type',
-    'cod_inmetro': 'Cod. Inmetro',
-    'lote_inmetro': 'Lote Inmetro',
-    'ponto_teste': 'Test Pt',
-    'vazao_real': 'Flow Rate',
-    'erro_relativo': 'Rel. Error',
-    'temperatura_celcius': 'Temp °C',
-    'pressao_pa': 'Press Pa',
-    'status_tecnico': 'Tech Status'
-  };
-
-  const formatCellValue = (field: string, value: any) => {
-    if (value === null || value === undefined) return '-';
-    if (field === 'data_hora' || field === 'data_access' || field === 'csv_data_vinculo') {
-        return new Date(value).toLocaleString('pt-BR');
-    }
-    return String(value);
-  };
+  const filteredData = data.filter(item => {
+    const s = searchTerm.toLowerCase();
+    return Object.values(item).some(v => String(v).toLowerCase().includes(s));
+  });
 
   return (
-    <div className="space-y-8 pb-32">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <Link href="/" className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white">
-            <ArrowLeft size={20} />
+    <div className="p-8 space-y-8 animate-in fade-in duration-700">
+      {/* Header with Navigation and Node Status */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-outline-variant/10 pb-8">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="w-12 h-12 rounded-xl bg-surface-mid border border-outline-variant/10 flex items-center justify-center text-[#dae2fd] opacity-40 hover:opacity-100 hover:bg-surface-highest transition-all group">
+            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           </Link>
           <div>
             <div className="flex items-center gap-4">
-              <h1 className="text-4xl font-bold text-white tracking-tighter">{benchName}</h1>
+              <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight">{benchName}</h1>
               <span className={cn(
                 "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg",
-                benchStatus === 'Online' ? "bg-green-500 text-black border-green-400" :
-                benchStatus === 'Idle' ? "bg-yellow-500 text-black border-yellow-400" :
-                "bg-red-500 text-white border-red-400"
-              )}>{benchStatus}</span>
+                benchStatus === 'Online' ? "bg-brand-tertiary/10 text-brand-tertiary border-brand-tertiary/20" :
+                benchStatus === 'Idle' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                "bg-brand-error/10 text-brand-error border-brand-error/20"
+              )}>{benchStatus} Protocol</span>
             </div>
-            <p className="text-white/30 text-sm mt-1 uppercase tracking-widest font-bold text-[10px]">Industrial Data Node #{id}</p>
+            <p className="text-[#dae2fd] opacity-40 text-[10px] font-bold uppercase tracking-widest mt-2">
+              Industrial Node Clustering #0{id} — Latency Managed
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => fetchData(page)}
-            disabled={loading}
-            className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white/80 hover:bg-white/10 transition-all text-sm font-bold disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={cn(loading && "animate-spin")} /> {loading ? 'UPDATING...' : 'SYNC REFRESH'}
-          </button>
-          <button 
-            onClick={exportToCSV}
-            disabled={loading || data.length === 0}
-            className="flex items-center gap-3 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white transition-all text-sm font-bold shadow-lg shadow-blue-500/10"
-          >
-            <Download size={16} /> EXPORT CSV
-          </button>
+        <div className="flex gap-3">
+           <button onClick={() => fetchData(page)} className="bg-surface-mid border border-outline-variant/10 text-[#dae2fd] text-xs font-bold px-6 py-3 rounded-xl flex items-center gap-3 hover:bg-surface-highest transition-all">
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> REFRESH
+           </button>
+           <button className="machined-gradient text-white font-extrabold text-[10px] tracking-widest uppercase px-8 py-3 rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2">
+              <Download size={14} /> EXPORT NODE LOG
+           </button>
         </div>
       </header>
 
-      <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/5 rounded-2xl w-fit">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300",
-              activeTab === tab 
-                ? "bg-white text-black shadow-xl" 
-                : "text-white/20 hover:text-white/50"
-            )}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {/* Tabs and Filtering */}
+      <div className="flex flex-col md:flex-row gap-6 justify-between items-center">
+        <div className="p-1.5 bg-surface-mid border border-outline-variant/10 rounded-2xl flex gap-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-8 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                activeTab === tab ? "bg-surface-highest text-brand-primary shadow-lg" : "text-[#dae2fd] opacity-40 hover:opacity-100"
+              )}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/[0.02] p-4 rounded-[32px] border border-white/5">
-        <div className="relative w-full md:w-[450px]">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dae2fd] opacity-20" size={16} />
           <input 
             type="text" 
-            placeholder={`Deep search in ${activeTab}...`} 
+            placeholder="Search within node datastream..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-black/20 border border-white/5 rounded-2xl py-4 pl-16 pr-6 text-sm focus:outline-none focus:border-blue-500/40 transition-all font-mono text-white/60"
+            className="w-full bg-surface-mid border border-outline-variant/10 rounded-xl py-3 pl-12 pr-4 text-xs text-[#dae2fd] focus:ring-1 focus:ring-brand-primary transition-all placeholder:text-[#dae2fd]/20"
           />
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white/40 text-xs font-bold uppercase tracking-widest transition-all">
-            <Filter size={16} /> Filters
-          </button>
         </div>
       </div>
 
-      <div className="glass-card rounded-[40px] overflow-hidden border border-white/5 relative">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left whitespace-nowrap">
-            <thead className="border-b border-white/5 bg-white/[0.02]">
-              <tr>
-                {activeTab === 'Data' ? (
+      {/* High-Fidelity Data Table */}
+      <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-highest/30">
+                {activeTab === 'Consolidated Data' ? (
+                   visibleFields.map(f => (
+                    <th key={f} className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">
+                      {FIELD_LABELS[f] || f}
+                    </th>
+                   ))
+                ) : activeTab === 'Primary Logs' ? (
                   <>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Meter Number</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Conclusion</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Obs (Note)</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Save Time</th>
-                  </>
-                ) : activeTab === 'Full Data' ? (
-                  <>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">ID Mark</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">JSON Payload</th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Sync At</th>
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">Meter Serial</th>
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">Conclusion Status</th>
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">Lab Record Time</th>
                   </>
                 ) : (
                   <>
-                    {visibleFields.map(field => (
-                        <th key={field} className="px-8 py-6 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                            {FIELD_LABELS[field] || field}
-                        </th>
-                    ))}
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">ID Mark / Anchor</th>
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">JSON Industrial Payload</th>
+                    <th className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">Cloud Sync Timestamp</th>
                   </>
                 )}
-                <th className="px-8 py-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-outline-variant/5">
               {loading ? (
                 <tr>
-                  <td colSpan={activeTab === 'Consolidated' ? visibleFields.length + 1 : 10} className="px-8 py-32 text-center">
-                    <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4 opacity-20" />
-                    <p className="text-white/20 font-bold tracking-widest text-xs uppercase">Pulling Datastream...</p>
-                  </td>
+                   <td colSpan={10} className="py-32 text-center text-[#dae2fd] opacity-20 italic">
+                      <div className="flex flex-col items-center gap-4">
+                         <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+                         <span className="text-[10px] font-bold uppercase tracking-widest">Opening Secure Stream Port...</span>
+                      </div>
+                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-8 py-20 text-center text-white/10 italic">No records found.</td>
+                   <td colSpan={10} className="py-24 text-center text-[#dae2fd] opacity-20 italic text-sm">
+                      No matching records detected in this node's registry.
+                   </td>
                 </tr>
-              ) : (
-                filteredData.map((item: any, i: number) => (
-                  <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
-                    {activeTab === 'Data' ? (
-                      <>
-                        <td className="px-8 py-5">
-                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || item.id_mark_bancada || '-'}</span>
-                        </td>
-                        <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || item.meter_number || '-'}</td>
-                        <td className="px-8 py-5">
+              ) : filteredData.map((row, i) => (
+                <tr key={i} className="hover:bg-surface-highest/10 transition-colors group">
+                  {activeTab === 'Consolidated Data' ? (
+                    visibleFields.map(field => {
+                      const value = row[field];
+                      if (field === 'status_resultado') {
+                        const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
+                        return (
+                          <td key={field} className="px-8 py-5">
+                            <span className={cn(
+                              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
+                              isOk ? "bg-brand-tertiary/10 text-brand-tertiary" : "bg-brand-error/10 text-brand-error"
+                            )}>
+                              <div className={cn("w-1.5 h-1.5 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
+                              {value}
+                            </span>
+                          </td>
+                        );
+                      }
+                      if (field === 'data_hora') return <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-40 tabular-nums">{value ? format(new Date(value), 'yyyy-MM-dd HH:mm:ss') : '-'}</td>;
+                      if (field === 'meter_number') return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value}</td>;
+                      
+                      return <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-60">{value === null || value === undefined ? '-' : String(value)}</td>;
+                    })
+                  ) : activeTab === 'Primary Logs' ? (
+                    <>
+                       <td className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{row['Meter Number'] || row.meter_number}</td>
+                       <td className="px-8 py-5">
                           <span className={cn(
-                              "px-2 py-0.5 rounded-md text-[10px] font-bold",
-                              (item['Error conclusion'] || item.status_resultado) === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                          )}>
-                            {item['Error conclusion'] || item.status_resultado || '-'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-white/30 text-[10px]">
-                          {(item.note || item.observacao) ? <div className="flex items-center gap-2 text-amber-400/60 leading-none"><StickyNote size={12} /> <span className="truncate max-w-[120px]">{item.note || item.observacao}</span></div> : '-'}
-                        </td>
-                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || item.data_access || '-'}</td>
-                      </>
-                    ) : activeTab === 'Full Data' ? (
-                      <>
-                        <td className="px-8 py-5">
-                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || '-'}</span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="bg-black/20 border border-white/5 rounded-xl p-3 font-mono text-[10px] text-white/40 max-w-sm truncate">
-                            {JSON.stringify(item.raw_payload || item)}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">
-                          {new Date(item.sync_at).toLocaleString('pt-BR')}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        {visibleFields.map(field => {
-                            const val = item[field] || item[field.toLowerCase()] || (field === 'Lote' ? item.lote : null) || (field === 'Lacre' ? item.lacre : null);
-                            
-                            if (field === 'Meter Number') {
-                                return <td key={field} className="px-8 py-5 font-mono text-blue-400 font-bold text-sm tracking-tighter">{val || '-'}</td>;
-                            }
-                            if (field === 'Error conclusion') {
-                                return (
-                                    <td key={field} className="px-8 py-5">
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                                            val === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                                        )}>
-                                            {val || 'N/A'}
-                                        </span>
-                                    </td>
-                                );
-                            }
-                            if (field === 'Lote' || field === 'Lacre') {
-                                return (
-                                    <td key={field} className="px-8 py-5">
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border",
-                                            val ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/10 border-transparent"
-                                        )}>
-                                            {val || 'N/A'}
-                                        </span>
-                                    </td>
-                                );
-                            }
-                            return (
-                                <td key={field} className="px-8 py-5 text-white/40 text-xs font-mono">
-                                    {formatCellValue(field, val)}
-                                </td>
-                            );
-                        })}
-                      </>
-                    )}
-
-                    <td className="px-8 py-5">
-                      <button className="text-[10px] font-black uppercase text-white/10 group-hover:text-blue-400 transition-all tracking-widest">Detail View</button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                             "px-3 py-1 rounded-lg text-[10px] font-bold uppercase",
+                             (row['Error conclusion'] || row.status_resultado) === 'Aprovado' ? "bg-brand-tertiary/10 text-brand-tertiary" : "bg-brand-error/10 text-brand-error"
+                          )}>{row['Error conclusion'] || row.status_resultado || 'N/A'}</span>
+                       </td>
+                       <td className="px-8 py-5 text-xs text-[#dae2fd] opacity-30 tabular-nums">{row['Save time'] || format(new Date(row.timestamp), 'yyyy-MM-dd HH:mm:ss')}</td>
+                    </>
+                  ) : (
+                    <>
+                       <td className="px-8 py-5 font-mono text-xs font-bold text-brand-primary">{row['ID Mark'] || row.composite_id}</td>
+                       <td className="px-8 py-5">
+                           <div className="bg-surface-lowest p-3 border border-outline-variant/10 rounded-xl max-w-sm truncate text-[10px] font-mono text-[#dae2fd] opacity-40 group-hover:opacity-100 transition-opacity">
+                              {JSON.stringify(row.raw_payload || row)}
+                           </div>
+                       </td>
+                       <td className="px-8 py-5 text-xs text-[#dae2fd] opacity-30 tabular-nums">{format(new Date(row.sync_at), 'yyyy-MM-dd HH:mm:ss')}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
-        <div className="p-8 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
-          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
-            {totalCount.toLocaleString()} Total Records • Page {page + 1}/{totalPages || 1}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setPage(p => p - 1)}
-              disabled={!hasPrev || loading}
-              className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase transition-all disabled:opacity-20 text-white/60 hover:text-white"
-            >Back</button>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={!hasNext || loading}
-              className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase transition-all disabled:opacity-20 text-white/60 hover:text-white"
-            >Load Next</button>
-          </div>
+        {/* Action Pagination Accent */}
+        <div className="p-6 bg-surface-highest/20 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em]">
+           <div className="flex items-center gap-6">
+              <span className="text-brand-tertiary">Real-time Node Pooling: High</span>
+              <span>Loaded {reportData.length} records</span>
+           </div>
+           <div className="flex gap-4">
+              <button 
+                onClick={() => setPage(p => p - 1)} disabled={page === 0}
+                className="flex items-center gap-1 hover:text-brand-primary transition-all disabled:opacity-5"
+              ><ChevronLeft size={14} /> Back</button>
+              <button 
+                onClick={() => setPage(p => p + 1)} disabled={data.length < PAGE_SIZE}
+                className="flex items-center gap-1 hover:text-brand-primary transition-all disabled:opacity-5"
+              >Next Cluster <ChevronRight size={14} /></button>
+           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Decorative Blueprint Accent */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.02] blueprint-grid" />
     </div>
   );
 }

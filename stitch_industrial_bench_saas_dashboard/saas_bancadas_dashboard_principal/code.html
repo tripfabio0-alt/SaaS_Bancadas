@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#45464d",
+                    "tertiary-container": "#001a29",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-primary-fixed-variant": "#004395",
+                    "on-secondary-fixed": "#0b1c30",
+                    "on-tertiary-container": "#0089c3",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "primary-container": "#00163a",
+                    "on-secondary": "#213145",
+                    "tertiary": "#89ceff",
+                    "background": "#0b1326",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-tertiary": "#00344d",
+                    "inverse-surface": "#dae2fd",
+                    "on-tertiary-fixed": "#001e2f",
+                    "primary-fixed-dim": "#adc6ff",
+                    "outline": "#909097",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-highest": "#2d3449",
+                    "on-surface": "#dae2fd",
+                    "on-primary-fixed": "#001a42",
+                    "secondary-container": "#3a4a5f",
+                    "surface-container-lowest": "#060e20",
+                    "surface-dim": "#0b1326",
+                    "secondary-fixed": "#d3e4fe",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "surface": "#0b1326",
+                    "inverse-on-surface": "#283044",
+                    "on-secondary-container": "#a9bad3",
+                    "surface-variant": "#2d3449",
+                    "secondary": "#b7c8e1",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "on-error": "#690005",
+                    "on-primary": "#002e6a",
+                    "on-surface-variant": "#c6c6cd",
+                    "surface-tint": "#adc6ff",
+                    "surface-bright": "#31394d",
+                    "error-container": "#93000a",
+                    "inverse-primary": "#005ac2",
+                    "surface-container-high": "#222a3d",
+                    "on-primary-container": "#357df1",
+                    "surface-container-low": "#131b2e",
+                    "error": "#ffb4ab",
+                    "primary": "#adc6ff",
+                    "primary-fixed": "#d8e2ff",
+                    "surface-container": "#171f33",
+                    "on-background": "#dae2fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .status-glow-ok { box-shadow: 0 0 12px rgba(137, 206, 255, 0.3); }
+        .status-glow-nk { box-shadow: 0 0 12px rgba(255, 180, 171, 0.3); }
+        .glass-panel { background: rgba(45, 52, 73, 0.6); backdrop-filter: blur(12px); }
+        .machined-gradient { background: linear-gradient(135deg, #adc6ff 0%, #357df1 100%); }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0b1326] flex justify-between items-center w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<h1 class="text-2xl font-bold tracking-tighter text-[#adc6ff] font-headline">Industrial Bench</h1>
+</div>
+<div class="flex items-center gap-6">
+<!-- Language Toggle -->
+<div class="flex items-center bg-surface-container-highest rounded-full p-1 h-9">
+<button class="px-3 py-1 rounded-full text-xs font-bold glass-panel text-primary">PT-BR</button>
+<button class="px-3 py-1 rounded-full text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors">EN</button>
+</div>
+<div class="flex items-center gap-4 text-[#dae2fd]">
+<span class="material-symbols-outlined hover:bg-[#222a3d] p-2 rounded-lg cursor-pointer transition-all">language</span>
+<span class="material-symbols-outlined hover:bg-[#222a3d] p-2 rounded-lg cursor-pointer transition-all">dark_mode</span>
+<div class="h-8 w-8 rounded-lg overflow-hidden bg-surface-container-high ring-1 ring-outline-variant/20">
+<img alt="User profile settings" data-alt="Professional portrait of a male industrial engineer in a clean blue shirt against a blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOgEFlt49vy5J2LF5bntTE08xCxrzLMpvBpLfO9AcA5t4DVV-jE-TzMdgjYTcw2GDRIzH_24Cg9lpYhFARV_6h4EvHqmHYYtaqYir933morXMcsIGY-Llq-dm6dyQr1UfQZw54nyH56zwYTZ6RD0NwMrNxNHL3R3bHx-N5vVDVb4gcrMCx-LrvDk-riKpo41vsUa2nyGGS4BdVlVr-cjPZ-ggm_uKeQ4pQ6vO3DsusTB9NAbNgX5_Ex3yNIWLs05y8hCUBLsKAp13K"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-[#131b2e] shadow-[1px_0_0_0_rgba(69,70,77,0.15)] flex flex-col h-full py-8 pt-24 gap-2">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">precision_manufacturing</span>
+</div>
+<div>
+<h2 class="text-lg font-bold text-[#adc6ff] font-headline">Bench Control</h2>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Station ID: 08-A</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 bg-[#1e2a4a] text-[#adc6ff] border-l-4 border-[#357df1] font-semibold transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-inter text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">thermostat</span>
+<span class="font-inter text-sm font-medium">Climate Monitoring</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">view_column</span>
+<span class="font-inter text-sm font-medium">Column Configuration</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings_applications</span>
+<span class="font-inter text-sm font-medium">Administrative Settings</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-inter text-sm font-medium">Support</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-inter text-sm font-medium">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pl-64 pt-20 min-h-screen">
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- Dashboard Header -->
+<div class="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-outline-variant/10 pb-6">
+<div>
+<h1 class="text-4xl font-extrabold tracking-tighter text-primary font-headline">Main Dashboard</h1>
+<p class="text-on-surface-variant mt-1">Real-time industrial verification metrics across all active benches.</p>
+</div>
+<div class="flex gap-3">
+<button class="machined-gradient text-on-primary font-bold px-6 py-2 rounded-lg text-xs tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">add</span>
+                        NEW CALIBRATION
+                    </button>
+<button class="bg-surface-container-high border border-outline-variant/20 text-on-surface px-4 py-2 rounded-lg text-xs font-bold hover:bg-surface-variant transition-all">
+                        EXPORT CSV
+                    </button>
+</div>
+</div>
+<!-- Summary Cards: Bento Style -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Total Approved -->
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-tertiary text-6xl">check_circle</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Total Approved</p>
+<div class="flex items-end gap-2">
+<h2 class="text-5xl font-extrabold text-tertiary font-headline">1,422</h2>
+<span class="text-tertiary text-sm font-bold pb-1 flex items-center"><span class="material-symbols-outlined text-xs">trending_up</span> 12%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[88%]"></div>
+</div>
+</div>
+<!-- Total Rejected -->
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-error text-6xl">cancel</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Total Rejected</p>
+<div class="flex items-end gap-2">
+<h2 class="text-5xl font-extrabold text-error font-headline">48</h2>
+<span class="text-error text-sm font-bold pb-1 flex items-center"><span class="material-symbols-outlined text-xs">trending_down</span> 2%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-error w-[12%]"></div>
+</div>
+</div>
+<!-- Active Benches -->
+<div class="bg-surface-container-low p-6 rounded-xl col-span-1 md:col-span-2 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Bench Status</p>
+<h3 class="text-xl font-bold text-on-surface">6/8 Online</h3>
+</div>
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">01</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">02</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-tertiary text-on-tertiary flex items-center justify-center text-[10px] font-bold">03</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">04</div>
+</div>
+</div>
+<div class="flex gap-4 mt-6">
+<div class="flex-1 bg-surface-container p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Average WME</p>
+<p class="text-lg font-bold text-primary">0.9982</p>
+</div>
+<div class="flex-1 bg-surface-container p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Station Temp</p>
+<p class="text-lg font-bold text-primary">22.4°C</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Table Section -->
+<section class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="p-6 flex justify-between items-center bg-surface-container/50">
+<h2 class="text-lg font-bold text-[#adc6ff] flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                        Measurement Log
+                    </h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container border-none rounded-lg pl-10 pr-4 py-2 text-sm text-on-surface focus:ring-1 focus:ring-primary w-64" placeholder="Search Meter Number..." type="text"/>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/30">
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Meter Number</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Bench ID</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">WME Value</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Status (WME)</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Final Conclusion</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant text-right">Timestamp</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-mono text-sm text-primary">MET-4829-X</td>
+<td class="px-6 py-4 text-sm">Bench-08A</td>
+<td class="px-6 py-4 text-sm font-medium">0.9994</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> OK
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> APROVADO
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right text-xs text-on-surface-variant">2023-10-24 14:22:10</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-mono text-sm text-primary">MET-4830-Z</td>
+<td class="px-6 py-4 text-sm">Bench-08A</td>
+<td class="px-6 py-4 text-sm font-medium">1.0421</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-error text-[10px] font-bold status-glow-nk">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span> NK
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-error text-[10px] font-bold status-glow-nk">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span> REPROVADO
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right text-xs text-on-surface-variant">2023-10-24 14:25:44</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-mono text-sm text-primary">MET-4831-A</td>
+<td class="px-6 py-4 text-sm">Bench-03B</td>
+<td class="px-6 py-4 text-sm font-medium">0.9981</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> OK
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> APROVADO
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right text-xs text-on-surface-variant">2023-10-24 14:30:12</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-mono text-sm text-primary">MET-4832-B</td>
+<td class="px-6 py-4 text-sm">Bench-08A</td>
+<td class="px-6 py-4 text-sm font-medium">0.9991</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> OK
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container text-tertiary text-[10px] font-bold status-glow-ok">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> APROVADO
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right text-xs text-on-surface-variant">2023-10-24 14:35:55</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-6 bg-surface-container/30 flex justify-between items-center border-t border-outline-variant/10">
+<p class="text-xs text-on-surface-variant">Showing 4 of 1,470 results</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary text-xs font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Visual Accents: Blueprint Grid Background -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03]" style="background-image: linear-gradient(#adc6ff 1px, transparent 1px), linear-gradient(90deg, #adc6ff 1px, transparent 1px); background-size: 40px 40px;"></div>
+</body></html>

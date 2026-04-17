@@ -26,7 +26,7 @@ def map_columns(df, is_full_data=False):
     metadata_map = {
         'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
         'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
-        'Error conclusion': ['Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
+        'Error conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
         'Save time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
         'Note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
     }
@@ -36,8 +36,10 @@ def map_columns(df, is_full_data=False):
         'test_point': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
         'flow_rate': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
         'error_relativo': ['Error', 'Erro', 'Erro relativo', 'Relative Error'],
-        'temperature': ['Temperature', 'Temperatura', 'Temp', 'T'],
-        'pressure': ['Pressure', 'Pressão', 'Pressao', 'P'],
+        'temperature': ['Labtemperature', 'Temperature', 'Temperatura', 'Temp', 'T'],
+        'pressure': ['Labpressure', 'Pressure', 'Pressão', 'Pressao', 'P'],
+        'umidade': ['Humidity', 'Umidade', 'Humidade', 'H', 'RH', 'Umid'],
+        'wme': ['WME', 'Weighted Mean Error', 'Erro Medio Ponderado', 'Erro Ponderado'],
         'status_tecnico': ['Status', 'Status técnico', 'Tech Status']
     }
 

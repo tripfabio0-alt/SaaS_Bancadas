@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline-variant": "#45464d",
+                      "tertiary-container": "#001a29",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "on-primary-fixed-variant": "#004395",
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-tertiary-container": "#0089c3",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "primary-container": "#00163a",
+                      "on-secondary": "#213145",
+                      "tertiary": "#89ceff",
+                      "background": "#0b1326",
+                      "tertiary-fixed": "#c9e6ff",
+                      "on-tertiary": "#00344d",
+                      "inverse-surface": "#dae2fd",
+                      "on-tertiary-fixed": "#001e2f",
+                      "primary-fixed-dim": "#adc6ff",
+                      "outline": "#909097",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-highest": "#2d3449",
+                      "on-surface": "#dae2fd",
+                      "on-primary-fixed": "#001a42",
+                      "secondary-container": "#3a4a5f",
+                      "surface-container-lowest": "#060e20",
+                      "surface-dim": "#0b1326",
+                      "secondary-fixed": "#d3e4fe",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "surface": "#0b1326",
+                      "inverse-on-surface": "#283044",
+                      "on-secondary-container": "#a9bad3",
+                      "surface-variant": "#2d3449",
+                      "secondary": "#b7c8e1",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "on-error": "#690005",
+                      "on-primary": "#002e6a",
+                      "on-surface-variant": "#c6c6cd",
+                      "surface-tint": "#adc6ff",
+                      "surface-bright": "#31394d",
+                      "error-container": "#93000a",
+                      "inverse-primary": "#005ac2",
+                      "surface-container-high": "#222a3d",
+                      "on-primary-container": "#357df1",
+                      "surface-container-low": "#131b2e",
+                      "error": "#ffb4ab",
+                      "primary": "#adc6ff",
+                      "primary-fixed": "#d8e2ff",
+                      "surface-container": "#171f33",
+                      "on-background": "#dae2fd"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .custom-gradient-btn {
+            background: linear-gradient(135deg, #adc6ff 0%, #357df1 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-primary">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0b1326] flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold tracking-tighter text-[#adc6ff] font-headline">Industrial Bench</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#dae2fd] opacity-70 hover:bg-[#222a3d] hover:backdrop-blur-md transition-all rounded-lg scale-95 active:duration-75">
+<span class="material-symbols-outlined">language</span>
+</button>
+<button class="p-2 text-[#dae2fd] opacity-70 hover:bg-[#222a3d] hover:backdrop-blur-md transition-all rounded-lg scale-95 active:duration-75">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User profile settings" data-alt="close-up portrait of a technical engineer in a dark industrial control room setting with subtle blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6M7adqY8wRGJqWJtxhdTncq1nSX0wQoQerl3HoYph2I4DbGKgMtRQrKmshwsOmFf0OiU30Nd02og2_cMiaPe4yU2wxym3wxsiGAxLzLyfilsblcM4HGxcwsC7n_1p7nIqake4_HE97vMiVP-IGOavIjuKXUl7b3lQEkpYdE65ROKl7USqeA0QOpR44DL1rQDg9TooOj7KYlErKBBFISuGgB4C9-YCkrmydT0LkZfyy-QAeDh0y7gt7U_fP3ApGV0ceivQGYTRclcd"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-64 bg-[#131b2e] flex flex-col py-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] mt-16">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">settings_input_component</span>
+</div>
+<div>
+<h2 class="text-lg font-bold text-[#adc6ff] font-headline">Bench Control</h2>
+<p class="text-xs text-[#dae2fd] opacity-60">Station ID: 08-A</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col flex-1 px-3 gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">thermostat</span>
+                Climate Monitoring
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#1e2a4a] text-[#adc6ff] border-l-4 border-[#357df1] font-semibold font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">view_column</span>
+                Column Configuration
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">settings_applications</span>
+                Administrative Settings
+            </a>
+</div>
+<div class="px-3 mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Logout
+            </a>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="ml-64 mt-16 p-8 min-h-screen">
+<div class="max-w-5xl mx-auto">
+<!-- Header Section -->
+<header class="mb-10 flex justify-between items-end">
+<div>
+<h1 class="text-4xl font-extrabold text-primary font-headline tracking-tight mb-2">Visibility Settings</h1>
+<p class="text-on-surface-variant font-body">Configure column visibility for the real-time telemetry dashboard.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2.5 rounded-md border border-outline-variant/20 text-primary font-medium hover:bg-surface-container-high transition-all text-sm">
+                        Reset Defaults
+                    </button>
+<button class="px-8 py-2.5 rounded-md custom-gradient-btn text-on-primary font-bold text-sm uppercase tracking-wider shadow-lg">
+                        Apply Changes
+                    </button>
+</div>
+</header>
+<!-- Column Selection Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Group 1: Core Identifiers -->
+<section class="md:col-span-1 bg-surface-container-low p-6 rounded-xl space-y-6">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-tertiary">fingerprint</span>
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest">Core Identifiers</h3>
+</div>
+<div class="space-y-4">
+<!-- Toggle Row -->
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg group hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Meter Number</span>
+<span class="text-xs text-on-surface-variant">Primary hardware ID</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg group hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">ID Mark</span>
+<span class="text-xs text-on-surface-variant">Regulatory marking</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg group hover:bg-surface-container-high transition-all opacity-50">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Batch Number</span>
+<span class="text-xs text-on-surface-variant">Manufacturing group</span>
+</div>
+<label class="relative inline-flex items-center cursor-not-allowed">
+<input class="sr-only peer" disabled="" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface-variant/20 after:border after:rounded-full after:h-5 after:w-5"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Group 2: Operational Telemetry -->
+<section class="md:col-span-2 bg-surface-container-low p-6 rounded-xl">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-tertiary">analytics</span>
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest">Operational Telemetry</h3>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">WME (%)</span>
+<span class="text-xs text-on-surface-variant">Wood Moisture Equivalent</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Temperature</span>
+<span class="text-xs text-on-surface-variant">Celsius / Fahrenheit</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Humidity</span>
+<span class="text-xs text-on-surface-variant">Relative atmosphere %</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Signal Strength</span>
+<span class="text-xs text-on-surface-variant">RSSI (dBm)</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Battery Life</span>
+<span class="text-xs text-on-surface-variant">Estimated discharge</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-all">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Last Sync</span>
+<span class="text-xs text-on-surface-variant">UTC Timestamp</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-on-primary-container"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Group 3: Diagnostics & Alerts -->
+<section class="md:col-span-3 bg-surface-container-low p-6 rounded-xl">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-tertiary">warning</span>
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest">Diagnostics &amp; Alerts</h3>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+<div class="p-4 bg-surface-container rounded-lg border-l-2 border-tertiary">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-semibold text-on-surface">Error Log Status</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">Displays active hardware fault codes and diagnostic messages.</p>
+</div>
+<input class="h-5 w-5 rounded border-outline-variant/30 bg-surface-container-highest text-on-primary-container focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+<div class="p-4 bg-surface-container rounded-lg border-l-2 border-tertiary">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-semibold text-on-surface">Calibration Drift</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">Percentage variance from last known baseline measurement.</p>
+</div>
+<input class="h-5 w-5 rounded border-outline-variant/30 bg-surface-container-highest text-on-primary-container focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+<div class="p-4 bg-surface-container rounded-lg border-l-2 border-tertiary">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-semibold text-on-surface">Firmware Version</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">Internal system build and update sequence ID.</p>
+</div>
+<input checked="" class="h-5 w-5 rounded border-outline-variant/30 bg-surface-container-highest text-on-primary-container focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Visual Separation with a high-end card -->
+<div class="mt-12 p-8 glass-panel rounded-2xl relative overflow-hidden flex items-center justify-between border-t border-outline-variant/10">
+<div class="relative z-10">
+<h4 class="text-xl font-bold text-primary font-headline mb-2">Real-time Preview</h4>
+<p class="text-sm text-on-surface-variant max-w-md">Your dashboard will currently display <span class="text-tertiary font-bold">7 of 12</span> available data columns. High density is balanced for industrial legibility.</p>
+</div>
+<div class="relative z-10 flex gap-4">
+<button class="px-6 py-3 bg-surface-container-highest rounded-lg text-sm font-semibold text-on-surface hover:brightness-110 transition-all">Cancel</button>
+<button class="px-10 py-3 custom-gradient-btn rounded-lg text-sm font-bold text-on-primary uppercase tracking-widest shadow-xl">Save Configuration</button>
+</div>
+<!-- Subtle texture -->
+<div class="absolute right-0 top-0 w-64 h-full opacity-10 pointer-events-none">
+<img alt="Technical decoration" class="w-full h-full object-cover grayscale brightness-0 invert" data-alt="close-up of industrial machinery gears and technical schematics with a blueprint aesthetic and soft glowing light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-ktCDAst-bJSC0nER2VoaI2w7GCLvSfXoVLXKoTZ5Hsq9yGdp1eTiqM8aUO3GWJ0IeA7PgsPKUkvUYdiQ-n00U6HaRMwIs9I0qKCaORMDlxM6ya3ESp8rEh4wd6E5H6C1fS765vGnfTh7E6M6T2-cN06EjqEfB_bKitc3J_RyB7ptGio5jKOnuZ8vwHEdG4lHMRKqRyklBWwYJFzFa-XZL67fXGW918nGyfowYiPONS20T5pwUG7kwmineoq-JCY74W5CFip_jGbP"/>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#45464d",
+                    "tertiary-container": "#001a29",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-primary-fixed-variant": "#004395",
+                    "on-secondary-fixed": "#0b1c30",
+                    "on-tertiary-container": "#0089c3",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "primary-container": "#00163a",
+                    "on-secondary": "#213145",
+                    "tertiary": "#89ceff",
+                    "background": "#0b1326",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-tertiary": "#00344d",
+                    "inverse-surface": "#dae2fd",
+                    "on-tertiary-fixed": "#001e2f",
+                    "primary-fixed-dim": "#adc6ff",
+                    "outline": "#909097",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-highest": "#2d3449",
+                    "on-surface": "#dae2fd",
+                    "on-primary-fixed": "#001a42",
+                    "secondary-container": "#3a4a5f",
+                    "surface-container-lowest": "#060e20",
+                    "surface-dim": "#0b1326",
+                    "secondary-fixed": "#d3e4fe",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "surface": "#0b1326",
+                    "inverse-on-surface": "#283044",
+                    "on-secondary-container": "#a9bad3",
+                    "surface-variant": "#2d3449",
+                    "secondary": "#b7c8e1",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "on-error": "#690005",
+                    "on-primary": "#002e6a",
+                    "on-surface-variant": "#c6c6cd",
+                    "surface-tint": "#adc6ff",
+                    "surface-bright": "#31394d",
+                    "error-container": "#93000a",
+                    "inverse-primary": "#005ac2",
+                    "surface-container-high": "#222a3d",
+                    "on-primary-container": "#357df1",
+                    "surface-container-low": "#131b2e",
+                    "error": "#ffb4ab",
+                    "primary": "#adc6ff",
+                    "primary-fixed": "#d8e2ff",
+                    "surface-container": "#171f33",
+                    "on-background": "#dae2fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(45, 52, 73, 0.6);
+        backdrop-filter: blur(12px);
+      }
+      .machined-gradient {
+        background: linear-gradient(135deg, #adc6ff 0%, #357df1 100%);
+      }
+      body {
+        background-color: #0b1326;
+        color: #dae2fd;
+      }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-primary">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-[#0b1326] flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold tracking-tighter text-[#adc6ff] font-headline">Industrial Bench</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-lg hover:bg-[#222a3d] transition-all text-[#dae2fd] opacity-70">
+<span class="material-symbols-outlined">language</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-[#222a3d] transition-all text-[#dae2fd] opacity-70">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-surface-container-highest">
+<img class="h-full w-full object-cover" data-alt="professional portrait of a facility manager in a dark blue suit with focused lighting and industrial background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC31xoo2A8TH1M3RR8GAqnW585PlDRhIaaxtTRGA6piy4MoykRP5PbmTk2J6roRtfB1eqZm35iMq6yA3QVZ3x7CimeTSoN3rcMeCRGh4Q0TKFxECyEoBeSAViW3fChdw5rB6H9Xk3acUn2l_5BBhmGW1jA19SzVmIhWK6tQb-2mnpN-vy0bwpEBYSHUJJG7ynFZNDY3zehfokJizDTmNZjPMHffu-0RZjytrVwYRaZkagRBUfL57ySPMKDcbtmWzigTJV5CBgxj8ax2"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Bar -->
+<nav class="fixed left-0 top-0 h-full w-64 bg-[#131b2e] shadow-[1px_0_0_0_rgba(69,70,77,0.15)] flex flex-col py-8 gap-2 z-40 pt-20">
+<div class="px-6 mb-8">
+<h2 class="text-lg font-bold text-[#adc6ff] font-headline">Bench Control</h2>
+<p class="text-xs text-[#dae2fd] opacity-60">Station ID: 08-A</p>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">thermostat</span>
+<span class="font-medium text-sm">Climate Monitoring</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">view_column</span>
+<span class="font-medium text-sm">Column Configuration</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 bg-[#1e2a4a] text-[#adc6ff] border-l-4 border-[#357df1] font-semibold" href="#">
+<span class="material-symbols-outlined">settings_applications</span>
+<span class="font-medium text-sm">Administrative Settings</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-medium text-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#dae2fd] opacity-60 hover:bg-[#171f33] hover:text-white transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-medium text-sm">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 p-8 min-h-screen bg-surface">
+<!-- Header Section -->
+<div class="mb-10 flex justify-between items-end">
+<div>
+<h1 class="text-4xl font-extrabold font-headline text-primary tracking-tight">Administrative Control</h1>
+<p class="text-on-surface-variant mt-2 max-w-2xl font-body">Manage industrial infrastructure, production shifts, and system-wide branding. All changes require administrative elevation.</p>
+</div>
+<div class="flex items-center gap-2 px-4 py-2 bg-surface-container-high rounded-lg text-tertiary">
+<span class="material-symbols-outlined text-sm">lock</span>
+<span class="text-xs font-bold uppercase tracking-widest">Secure Session</span>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<!-- Section 1: Logo Upload (Asymmetric Wide) -->
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container p-8 rounded-xl flex flex-col h-full">
+<h3 class="text-primary font-bold font-headline mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined">branding_watermark</span>
+                        Logo Upload
+                    </h3>
+<div class="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl p-6 bg-surface-container-low transition-all hover:bg-surface-container-high group cursor-pointer">
+<div class="h-32 w-32 bg-surface-container-highest rounded-lg flex items-center justify-center mb-6 overflow-hidden">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:hidden">image</span>
+<div class="hidden group-hover:block text-center p-4">
+<span class="material-symbols-outlined text-primary mb-2">upload_file</span>
+<p class="text-[10px] text-on-surface font-bold uppercase tracking-tighter">Replace Logo</p>
+</div>
+</div>
+<p class="text-sm font-medium text-on-surface mb-1">IndustrialBench_Logo_v2.svg</p>
+<p class="text-xs text-on-surface-variant">Recommended: SVG or PNG (512x512)</p>
+</div>
+<button class="mt-6 w-full py-3 machined-gradient text-on-primary-container rounded-md font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-sm">cloud_upload</span>
+                        Upload New Asset
+                    </button>
+</div>
+<!-- Password Auth Card (Integrated Task Flow) -->
+<div class="bg-surface-container p-8 rounded-xl border border-outline-variant/10">
+<h3 class="text-primary font-bold font-headline mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined">security</span>
+                        Access Verification
+                    </h3>
+<div class="space-y-4">
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-lg py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary placeholder:text-outline-variant text-sm" placeholder="Enter Administrative Password" type="password"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-outline-variant cursor-pointer">visibility</span>
+</div>
+<p class="text-[10px] text-on-surface-variant leading-relaxed">Required to commit changes to production goals and hardware configuration.</p>
+</div>
+</div>
+</section>
+<!-- Section 2: Bench Management (Bento Grid) -->
+<section class="col-span-12 lg:col-span-8 grid grid-cols-2 gap-6">
+<div class="col-span-2 bg-surface-container p-8 rounded-xl">
+<div class="flex justify-between items-center mb-8">
+<h3 class="text-primary font-bold font-headline flex items-center gap-2">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+                            Bench Management
+                        </h3>
+<button class="flex items-center gap-2 text-xs font-bold text-tertiary border border-tertiary/20 px-3 py-1.5 rounded-full hover:bg-tertiary/10 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                            Provision New Bench
+                        </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Bench Card 01 -->
+<div class="bg-surface-container-low p-6 rounded-lg group hover:bg-surface-container-high transition-all">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Station</p>
+<h4 class="text-lg font-bold text-on-surface">Bench ID: 08-A</h4>
+</div>
+<div class="h-3 w-3 bg-tertiary rounded-full shadow-[0_0_8px_#89ceff]"></div>
+</div>
+<div class="space-y-2 mb-6">
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Uptime</span>
+<span class="text-on-surface font-mono">142h 12m</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Load Factor</span>
+<span class="text-tertiary font-mono">78%</span>
+</div>
+</div>
+<button class="text-[10px] font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CONFIGURATION <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+<!-- Bench Card 02 -->
+<div class="bg-surface-container-low p-6 rounded-lg group hover:bg-surface-container-high transition-all">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Station</p>
+<h4 class="text-lg font-bold text-on-surface">Bench ID: 08-B</h4>
+</div>
+<div class="h-3 w-3 bg-tertiary rounded-full shadow-[0_0_8px_#89ceff]"></div>
+</div>
+<div class="space-y-2 mb-6">
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Uptime</span>
+<span class="text-on-surface font-mono">98h 45m</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Load Factor</span>
+<span class="text-tertiary font-mono">62%</span>
+</div>
+</div>
+<button class="text-[10px] font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CONFIGURATION <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+<!-- Bench Card 03 -->
+<div class="bg-surface-container-low p-6 rounded-lg group hover:bg-surface-container-high transition-all">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Station</p>
+<h4 class="text-lg font-bold text-on-surface">Bench ID: 09-A</h4>
+</div>
+<div class="h-3 w-3 bg-tertiary rounded-full shadow-[0_0_8px_#89ceff]"></div>
+</div>
+<div class="space-y-2 mb-6">
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Uptime</span>
+<span class="text-on-surface font-mono">21h 05m</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Load Factor</span>
+<span class="text-tertiary font-mono">91%</span>
+</div>
+</div>
+<button class="text-[10px] font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CONFIGURATION <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+<!-- Bench Card 04 -->
+<div class="bg-surface-container-low p-6 rounded-lg group hover:bg-surface-container-high transition-all border border-error/20">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[10px] font-bold text-error uppercase tracking-widest">Maintenance Mode</p>
+<h4 class="text-lg font-bold text-on-surface">Bench ID: 09-B</h4>
+</div>
+<div class="h-3 w-3 bg-error rounded-full shadow-[0_0_8px_#ffb4ab]"></div>
+</div>
+<div class="space-y-2 mb-6">
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Status</span>
+<span class="text-error font-medium">Locked for Calibration</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Scheduled Restart</span>
+<span class="text-on-surface font-mono">14:00 GMT</span>
+</div>
+</div>
+<button class="text-[10px] font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                OVERRIDE SETTINGS <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Shift Configuration (High Density Data Table) -->
+<section class="col-span-12">
+<div class="bg-surface-container p-8 rounded-xl overflow-hidden relative">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="text-primary font-bold font-headline flex items-center gap-2">
+<span class="material-symbols-outlined">schedule</span>
+                                Shift Configuration (Configure turnos)
+                            </h3>
+<p class="text-xs text-on-surface-variant mt-1">Define operational time slots and individual performance targets.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-highest px-4 py-2 rounded-lg text-xs font-bold text-on-surface hover:bg-primary/20 transition-all">Export Report</button>
+<button class="bg-primary/10 px-4 py-2 rounded-lg text-xs font-bold text-primary border border-primary/20">Save Global Changes</button>
+</div>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-separate border-spacing-y-2">
+<thead>
+<tr class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">
+<th class="px-6 py-4">Shift Name</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Time Slot</th>
+<th class="px-6 py-4">Production Goal (Units)</th>
+<th class="px-6 py-4">Efficiency Target</th>
+<th class="px-6 py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody>
+<!-- Row 1 -->
+<tr class="bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 rounded-l-lg font-bold text-sm text-on-surface">Turno Matutino</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 bg-tertiary/10 text-tertiary text-[10px] font-bold rounded border border-tertiary/20">CURRENT</span>
+</td>
+<td class="px-6 py-5 font-mono text-xs text-on-surface-variant">06:00 - 14:00</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-bold text-on-surface">1,250</span>
+<div class="w-24 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-3/4 h-full bg-primary"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-bold text-primary">94%</td>
+<td class="px-6 py-5 rounded-r-lg text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">edit_square</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 rounded-l-lg font-bold text-sm text-on-surface">Turno Vespertino</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold rounded border border-outline-variant/20">SCHEDULED</span>
+</td>
+<td class="px-6 py-5 font-mono text-xs text-on-surface-variant">14:00 - 22:00</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-bold text-on-surface">1,100</span>
+<div class="w-24 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-1/2 h-full bg-primary"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-bold text-primary">88%</td>
+<td class="px-6 py-5 rounded-r-lg text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">edit_square</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 rounded-l-lg font-bold text-sm text-on-surface">Turno Noturno</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold rounded border border-outline-variant/20">SCHEDULED</span>
+</td>
+<td class="px-6 py-5 font-mono text-xs text-on-surface-variant">22:00 - 06:00</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-bold text-on-surface">850</span>
+<div class="w-24 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-1/4 h-full bg-primary"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-bold text-primary">82%</td>
+<td class="px-6 py-5 rounded-r-lg text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">edit_square</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Visual Reference (Tonal Transition) -->
+<footer class="mt-20 border-t border-outline-variant/10 pt-10 flex flex-col md:flex-row justify-between items-center gap-6 opacity-60">
+<div class="flex items-center gap-3">
+<span class="text-xl font-bold font-headline text-primary tracking-tighter">Industrial Bench</span>
+<span class="text-xs">v4.2.0-STABLE</span>
+</div>
+<div class="flex gap-8 text-[10px] font-bold uppercase tracking-widest">
+<a class="hover:text-primary" href="#">Documentation</a>
+<a class="hover:text-primary" href="#">System Health</a>
+<a class="hover:text-primary" href="#">Privacy Policy</a>
+</div>
+<div class="text-xs font-mono">
+                LAST_SYNC: 2023-11-24T14:48:22Z
+            </div>
+</footer>
+</main>
+<!-- FAB for Global Save (Suppressed on Details as per instruction, but added here as an example of Industrial specific FAB) -->
+<button class="fixed bottom-8 right-8 machined-gradient h-16 w-16 rounded-full flex items-center justify-center shadow-[0_8px_24px_rgba(53,125,241,0.4)] group hover:scale-105 transition-all">
+<span class="material-symbols-outlined text-on-primary-container text-3xl font-bold">save</span>
+<div class="absolute right-20 bg-surface-container-highest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all whitespace-nowrap border border-primary/20">
+<span class="text-xs font-bold text-primary">Commit All Configuration</span>
+</div>
+</button>
+</body></html>

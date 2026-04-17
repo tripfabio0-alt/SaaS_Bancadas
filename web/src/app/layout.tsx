@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
-
-const inter = Inter({ subsets: ["latin"] });
+import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "SaaS Bancadas | Industrial Monitoring",
-  description: "Advanced monitoring dashboard for test benches",
+  title: "Industrial Bench SaaS",
+  description: "Advanced monitoring dashboard for industrial test benches",
 };
 
 export default function RootLayout({
@@ -17,12 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#050505] text-white min-h-screen`}>
+      <body className="bg-background-deep text-foreground min-h-screen">
         <Sidebar />
-        <main className="pl-64 min-h-screen">
-          <div className="p-8 max-w-7xl mx-auto">
-            {children}
-          </div>
+        <Header />
+        <main className="pl-64 pt-24 min-h-screen">
+          {children}
         </main>
       </body>
     </html>

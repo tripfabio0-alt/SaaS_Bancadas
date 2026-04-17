@@ -1,7 +1,6 @@
 "use client";
 
 import Link from 'next/link';
-import { LayoutDashboard, Database, Activity, Settings, HelpCircle, GitCommit, ListFilter } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -31,127 +30,117 @@ export default function Sidebar() {
     }
     fetchBenches();
 
-    // Opcional: Realtime para atualizar o menu se os nomes mudarem
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('sidebar-sync')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config' }, fetchBenches)
       .subscribe();
 
     return () => { channel.unsubscribe(); };
   }, []);
 
+  const navItems = [
+    { label: 'Dashboard', href: '/', icon: 'dashboard' },
+    { label: 'Climate Monitoring', href: '/climate', icon: 'thermostat' },
+    { label: 'Reports & Logs', href: '/reports', icon: 'analytics' },
+    { label: 'Column Config', href: '/config', icon: 'view_column' },
+    { label: 'Settings', href: '/settings', icon: 'settings_applications' },
+  ];
+
   return (
-    <div className="w-64 h-screen glass-card border-r border-white/10 flex flex-col fixed left-0 top-0 z-50">
-      {/* Logo */}
-      <div className="p-6 border-b border-white/5">
-        <h1 className="text-2xl font-bold gradient-text">SaaS Bancadas</h1>
-        <p className="text-xs text-white/40 mt-1 uppercase tracking-widest">Industrial Monitoring</p>
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-mid flex flex-col pt-8 pb-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] z-50">
+      {/* Station Branding */}
+      <div className="px-6 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded bg-brand-primary/10 flex items-center justify-center">
+            <span className="material-icons text-brand-primary" style={{ fontSize: '20px' }}>precision_manufacturing</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight">Bench Control</h2>
+            <p className="text-[10px] uppercase tracking-widest text-[#dae2fd] opacity-60">Station ID: 08-A</p>
+          </div>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-        <Link
-          href="/"
-          className={cn(
-            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-            pathname === '/'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-              : "text-white/60 hover:bg-white/5 hover:text-white"
-          )}
-        >
-          <LayoutDashboard size={20} />
-          <span className="font-medium">Overview</span>
-        </Link>
-        
-        <Link
-          href="/reports"
-          className={cn(
-            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-            pathname === '/reports'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-              : "text-white/60 hover:bg-white/5 hover:text-white"
-          )}
-        >
-          <Activity size={20} />
-          <span className="font-medium">Global Union</span>
-        </Link>
+      {/* Primary Navigation */}
+      <nav className="flex-1 space-y-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-6 py-3 transition-all duration-200 group text-sm font-medium font-body",
+                isActive 
+                  ? "bg-surface-highest/40 text-brand-primary border-l-4 border-brand-secondary" 
+                  : "text-[#dae2fd] opacity-70 hover:bg-surface-high hover:opacity-100"
+              )}
+            >
+              <span className={cn(
+                "material-icons transition-transform group-hover:scale-110",
+                isActive ? "text-brand-primary" : "text-[#dae2fd]/60"
+              )}>
+                {item.icon}
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
 
-        <div className="pt-6 pb-2 flex items-center justify-between px-4">
-          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Test Benches</p>
-          <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+        {/* Live Benches (Read Only names as per user instruction) */}
+        <div className="pt-6 pb-2 px-6">
+          <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-[0.2em] mb-3">Live Benches</p>
+          <div className="space-y-1">
+            {benches.length === 0 ? (
+               <div className="px-3 py-2 text-[10px] text-white/20 italic">Initialzing benches...</div>
+            ) : benches.map((bench) => {
+              const benchHref = `/bancada/${bench.id}`;
+              const isActive = pathname === benchHref;
+              return (
+                <Link
+                  key={bench.id}
+                  href={benchHref}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2 rounded-lg transition-all text-xs font-medium",
+                    isActive 
+                      ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20" 
+                      : "text-[#dae2fd]/60 hover:text-white hover:bg-surface-high"
+                  )}
+                >
+                   <div className={cn(
+                     "w-1.5 h-1.5 rounded-full",
+                     isActive ? "bg-brand-primary shadow-[0_0_8px_rgba(173,198,255,0.6)]" : "bg-white/20"
+                   )} />
+                  {bench.name}
+                </Link>
+              );
+            })}
+          </div>
         </div>
-
-        {benches.length === 0 ? (
-           <div className="px-4 py-2 text-[10px] text-white/20 italic italic">Loading benches...</div>
-        ) : benches.map((bench) => (
-          <Link
-            key={bench.id}
-            href={`/bancada/${bench.id}`}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-              pathname === `/bancada/${bench.id}`
-                ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-                : "text-white/60 hover:bg-white/5 hover:text-white"
-            )}
-          >
-            <Database size={18} />
-            <span className="font-medium truncate">{bench.name}</span>
-          </Link>
-        ))}
       </nav>
 
-      {/* Footer links + versão */}
-      <div className="p-4 border-t border-white/10 space-y-1">
-        <Link
-          href="/changelog"
-          className={cn(
-            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200",
-            pathname === '/changelog'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-              : "text-white/40 hover:text-white hover:bg-white/5"
-          )}
+      {/* Footer */}
+      <div className="mt-auto space-y-1 px-2">
+        <Link 
+          href="/help" 
+          className="flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:opacity-100 rounded-lg transition-all text-sm font-medium"
         >
-          <GitCommit size={16} />
-          <span className="text-sm">Changelog</span>
+          <span className="material-icons text-lg">help</span>
+          <span>Support Center</span>
         </Link>
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200",
-            pathname === '/settings'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-              : "text-white/40 hover:text-white hover:bg-white/5"
-          )}
-        >
-          <Settings size={16} />
-          <span className="text-sm">Settings</span>
-        </Link>
-        <Link
-          href="/help"
-          className={cn(
-            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200",
-            pathname === '/help'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-600/20"
-              : "text-white/40 hover:text-white hover:bg-white/5"
-          )}
-        >
-          <HelpCircle size={16} />
-          <span className="text-sm">Help Center</span>
-        </Link>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:text-brand-error transition-all text-sm font-medium rounded-lg">
+          <span className="material-icons text-lg">logout</span>
+          <span>Logout System</span>
+        </button>
 
-        {/* Badge de versão */}
-        <div className="mt-3 px-4 pt-3 border-t border-white/5">
-          <Link
-            href="/changelog"
-            className="flex items-center justify-between group"
-          >
-            <span className="text-[10px] text-white/20 uppercase tracking-widest">Version</span>
-            <span className="text-xs font-mono font-bold text-white/30 group-hover:text-blue-400 transition-colors bg-white/5 px-2 py-0.5 rounded-full border border-white/5 group-hover:border-blue-500/30 group-hover:bg-blue-500/10">
-              v{APP_VERSION}
-            </span>
-          </Link>
+        {/* Version Badge */}
+        <div className="mt-4 px-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
+          <span className="text-[10px] text-white/20 uppercase tracking-widest">Version</span>
+          <span className="text-[10px] font-mono font-bold text-white/30 bg-surface-highest/50 px-2 py-0.5 rounded border border-outline-variant/10">
+            v{APP_VERSION}
+          </span>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

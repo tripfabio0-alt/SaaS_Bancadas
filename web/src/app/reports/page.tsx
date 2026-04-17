@@ -2,413 +2,255 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Activity, 
-  Search, 
   Download, 
   Calendar, 
-  Clock, 
-  Database, 
-  ArrowUpRight, 
-  Timer, 
-  Hash,
+  Search,
   Filter,
   RefreshCw,
-  BarChart3,
-  StickyNote,
-  Layers
+  History,
+  TrendingUp,
+  Activity,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell 
-} from 'recharts';
+import { format } from 'date-fns';
 
-const PERIODS = ['Past 24h', 'Past 30 Days', 'Past Year', 'Custom'];
-const REPORT_TYPES = [
-  { id: 'history', name: 'Global Union History', icon: Layers },
-  { id: 'uptime', name: 'Bench Productivity', icon: Timer },
-  { id: 'models', name: 'Equipment Models', icon: BarChart3 }
-];
+const STITCH_PERIODS = ['Last 24h', '7 Days', '30 Days', 'Custom'];
+
+const FIELD_LABELS: Record<string, string> = {
+  'meter_number': 'Meter Serial',
+  'lote_produto': 'Lote (CSV)',
+  'lacre': 'Lacre',
+  'status_resultado': 'Conclusion Status',
+  'observacao': 'Obs/Notes',
+  'data_hora': 'Timestamp',
+  'ponto_teste': 'Test Point',
+  'vazao_real': 'Flow Rate',
+  'erro_relativo': 'Rel. Error',
+  'temperatura_celcius': 'Labtemperature',
+  'pressao_pa': 'Labpressure',
+  'umidade_percentual': 'Humidity',
+  'wme_value': 'WME'
+};
 
 export default function ReportsPage() {
-  const [activeReport, setActiveReport] = useState('history');
-  const [activePeriod, setActivePeriod] = useState('Past 30 Days');
+  const [activePeriod, setActivePeriod] = useState('7 Days');
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchLote, setSearchLote] = useState('');
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalTests: 0,
-    avgTestTime: '18 min',
-    totalUptime: '84.2%',
-    activeBenches: 0
-  });
-
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
-
-  const FIELD_LABELS: Record<string, string> = {
-    'meter_number': 'Meter Serial',
-    'lote_produto': 'Lote (CSV)',
-    'lacre': 'Lacre',
-    'status_resultado': 'Status',
-    'observacao': 'Notes',
-    'data_hora': 'Test Time',
-    'id_mark_bancada': 'ID Mark',
-    'data_access': 'Access Save',
-    'cod_lacre': 'Cod. Lacre',
-    'seq_lote': 'Seq. Lote',
-    'csv_data_vinculo': 'Vinc. Date',
-    'csv_tipo': 'CSV Type',
-    'cod_inmetro': 'Cod. Inmetro',
-    'lote_inmetro': 'Lote Inmetro',
-    'ponto_teste': 'Test Pt',
-    'vazao_real': 'Flow Rate',
-    'erro_relativo': 'Rel. Error',
-    'temperatura_celcius': 'Temp °C',
-    'pressao_pa': 'Press Pa',
-    'status_tecnico': 'Tech Status'
-  };
 
   const fetchConfig = async () => {
     const { data } = await supabase.from('app_config').select('admin_settings').eq('id', 1).single();
     if (data?.admin_settings?.visible_fields) {
       setVisibleFields(data.admin_settings.visible_fields);
     } else {
-      setVisibleFields(['meter_number', 'lote_produto', 'lacre', 'status_resultado', 'data_hora']);
+      setVisibleFields(['meter_number', 'lote_produto', 'status_resultado', 'data_hora']);
     }
   };
 
-  const fetchGlobalHistory = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       await fetchConfig();
       let query = supabase.from('global_uniao').select('*');
       
-      if (searchTerm) query = query.ilike('meter_number', `%${searchTerm}%`);
-      if (searchLote) query = query.ilike('lote_produto', `%${searchLote}%`);
+      if (searchTerm) {
+        // Simple search on meter number or lote
+        query = query.or(`meter_number.ilike.%${searchTerm}%,lote_produto.ilike.%${searchTerm}%`);
+      }
       
-      const { data, error } = await query.order('data_hora', { ascending: false }).limit(200);
+      const { data, error } = await query.order('data_hora', { ascending: false }).limit(100);
       if (error) throw error;
       setReportData(data || []);
-      
-      const { count } = await supabase.from('data').select('*', { count: 'exact', head: true });
-      setStats(prev => ({ ...prev, totalTests: count || 0 }));
     } catch (e) {
-      console.error('Error fetching global history:', e);
+      console.error('Error fetching reports:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProductivityReport = async () => {
-      setLoading(true);
-      try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const { data, error } = await supabase
-          .from('global_uniao')
-          .select('timestamp, bancada_id')
-          .gte('timestamp', thirtyDaysAgo.toISOString());
-
-        if (error) throw error;
-
-        const dayCounts: Record<string, number> = {};
-        data?.forEach(row => {
-            const date = new Date(row.timestamp).toLocaleDateString('pt-BR');
-            dayCounts[date] = (dayCounts[date] || 0) + 1;
-        });
-
-        const chartData = Object.keys(dayCounts).map(date => ({
-            name: date,
-            count: dayCounts[date]
-        })).sort((a,b) => {
-           const [da, ma, ya] = a.name.split('/').map(Number);
-           const [db, mb, yb] = b.name.split('/').map(Number);
-           return new Date(ya, ma-1, da).getTime() - new Date(yb, mb-1, db).getTime();
-        });
-
-        setReportData(chartData);
-      } catch (e) {
-        console.error('Error fetching productivity:', e);
-      } finally {
-        setLoading(false);
-      }
-  };
-
   useEffect(() => {
-    if (activeReport === 'history') fetchGlobalHistory();
-    else if (activeReport === 'uptime') fetchProductivityReport();
-  }, [activeReport, activePeriod]);
-
-  // Auxiliar para formatar valores de células
-  const formatCellValue = (field: string, value: any) => {
-    if (value === null || value === undefined) return '-';
-    if (field === 'timestamp' || field === 'Save time' || field === 'data_vinculo') {
-        return new Date(value).toLocaleString('pt-BR');
-    }
-    return String(value);
-  };
+    fetchData();
+  }, [activePeriod]);
 
   return (
-    <div className="space-y-10 pb-20">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="p-8 space-y-8 animate-in fade-in duration-700">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
         <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Industrial Intelligence</h1>
-          <p className="text-white/40 mt-2">Unified data from all benches, partitions and external batches.</p>
+          <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight mb-2">
+            Industrial Intelligence
+          </h1>
+          <p className="text-[#dae2fd] opacity-40 font-medium italic">Unified Global Registry — Consensus of access logs and CSV production batches.</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex p-1 bg-white/5 border border-white/10 rounded-2xl">
-            {PERIODS.map(p => (
-              <button
-                key={p}
-                onClick={() => setActivePeriod(p)}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                  activePeriod === p ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white"
-                )}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-          <button 
-            onClick={() => activeReport === 'history' ? fetchGlobalHistory() : fetchProductivityReport()}
-            className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 hover:bg-blue-500/20 transition-all"
-          >
-            <Download size={20} />
-          </button>
+        <div className="flex items-center gap-3 bg-surface-mid p-1.5 rounded-xl border border-outline-variant/10">
+          {STITCH_PERIODS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setActivePeriod(t)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                activePeriod === t ? "bg-surface-highest text-brand-primary shadow-lg" : "text-[#dae2fd] opacity-40 hover:opacity-100"
+              )}
+            >
+              {t}
+            </button>
+          ))}
         </div>
-      </header>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Mini-Header */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
         {[
-          { label: 'Total Synchronized', value: stats.totalTests.toLocaleString(), icon: Hash, color: 'blue' },
-          { label: 'Avg Test Cycle', value: stats.avgTestTime, icon: Timer, color: 'emerald' },
-          { label: 'Productivity Index', value: stats.totalUptime, icon: Activity, color: 'amber' },
-          { label: 'Active Channels', value: 'Live', icon: RefreshCw, color: 'indigo' },
+          { label: 'Synchronized Records', value: reportData.length, icon: 'database', color: 'text-brand-primary' },
+          { label: 'Data Integrity', value: '100%', icon: 'verified', color: 'text-brand-tertiary' },
+          { label: 'Processing Delay', value: '0.4s', icon: 'speed', color: 'text-brand-primary' },
+          { label: 'Consensus Mode', value: 'Direct', icon: 'hub', color: 'text-brand-tertiary' },
         ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="glass-card p-6 rounded-3xl border border-white/5 relative overflow-hidden group"
-          >
-            <div className={`absolute top-0 right-0 p-4 bg-${stat.color}-500/5 rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-opacity`}>
-              <ArrowUpRight size={24} className={`text-${stat.color}-400`} />
-            </div>
-            <stat.icon className={`text-${stat.color}-400 mb-4`} size={24} />
-            <div className="text-2xl font-bold font-mono text-white mb-1">{stat.value}</div>
-            <div className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{stat.label}</div>
-          </motion.div>
+          <div key={i} className="bg-surface-mid p-5 rounded-2xl border border-outline-variant/5 flex items-center gap-4 group hover:bg-surface-highest transition-all">
+             <div className="w-10 h-10 rounded-xl bg-surface-highest/50 flex items-center justify-center">
+                <span className={cn("material-icons", stat.color)} style={{ fontSize: '20px' }}>{stat.icon}</span>
+             </div>
+             <div>
+                <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest">{stat.label}</p>
+                <div className="text-xl font-bold text-white">{stat.value}</div>
+             </div>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1 space-y-3">
-          <p className="px-4 pb-2 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Data Exploration</p>
-          {REPORT_TYPES.map(type => (
-            <button
-              key={type.id}
-              onClick={() => setActiveReport(type.id)}
-              className={cn(
-                "w-full flex items-center gap-4 px-5 py-4 rounded-3xl border transition-all duration-300",
-                activeReport === type.id 
-                  ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.02]" 
-                  : "bg-white/[0.02] border-white/5 text-white/40 hover:bg-white/5"
-              )}
-            >
-              <div className={cn(
-                "p-2 rounded-xl child-icon",
-                activeReport === type.id ? "bg-blue-500 text-white" : "bg-white/5"
-              )}>
-                <type.icon size={18} />
-              </div>
-              <span className="font-semibold text-sm">{type.name}</span>
-            </button>
-          ))}
-
-          <div className="pt-8 px-4">
-             <div className="p-6 bg-blue-500/5 rounded-[32px] border border-blue-500/10 space-y-4">
-                <div className="flex items-center gap-2 text-blue-400">
-                    <Filter size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Production Feed Filters</span>
-                </div>
-                <div className="space-y-3">
-                    <div>
-                        <label className="text-[9px] text-white/20 uppercase block mb-1.5 ml-1">Lote (From CSV)</label>
-                        <input 
-                          type="text" 
-                          value={searchLote}
-                          onChange={(e) => setSearchLote(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
-                          placeholder="Filter by Batch..."
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[10px] font-mono text-white/60 focus:outline-none focus:border-blue-500/40"
-                        />
-                    </div>
-                </div>
+      {/* Main Table Interface */}
+      <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl">
+        <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-surface-highest/20 border-b border-outline-variant/10 relative">
+          <div className="flex items-center gap-3">
+             <div className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+             <h2 className="text-lg font-bold text-brand-primary font-headline">Consolidated Production Stream</h2>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto">
+             <div className="relative flex-1 md:w-72">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dae2fd] opacity-20" size={16} />
+                <input 
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   onKeyDown={(e) => e.key === 'Enter' && fetchData()}
+                   className="w-full bg-surface-lowest border border-outline-variant/10 rounded-xl py-2.5 pl-12 pr-4 text-xs text-[#dae2fd] focus:ring-1 focus:ring-brand-primary transition-all placeholder:text-[#dae2fd]/20" 
+                   placeholder="Search Serial, Batch or ID..." 
+                   type="text"
+                />
              </div>
+             <button 
+                onClick={fetchData} 
+                className="p-2.5 bg-surface-highest/50 border border-outline-variant/10 rounded-xl text-[#dae2fd] hover:text-brand-primary transition-all active:scale-95"
+             >
+                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+             </button>
+             <button className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-background-deep font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95">
+                <Download size={14} /> Export Report
+             </button>
           </div>
         </div>
 
-        <div className="lg:col-span-3 space-y-6">
-          <div className="glass-card p-1 pb-1 rounded-[40px] border border-white/5 relative overflow-hidden flex flex-col min-h-[600px]">
-            <div className="p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 relative z-10">
-                <h3 className="text-xl font-bold text-white">
-                    {REPORT_TYPES.find(t => t.id === activeReport)?.name}
-                </h3>
-                
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={16} />
-                        <input 
-                            type="text"
-                            placeholder="Search Meter Serial..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && fetchGlobalHistory()}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all text-white"
-                        />
-                    </div>
-                    <button 
-                        onClick={() => activeReport === 'history' ? fetchGlobalHistory() : fetchProductivityReport()}
-                        className="p-3 bg-white/5 border border-white/10 rounded-2xl text-white/60 hover:text-white transition-all"
-                    >
-                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-                    </button>
-                </div>
-                </div>
-            </div>
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-highest/30">
+                {visibleFields.map(field => (
+                  <th key={field} className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#dae2fd] opacity-30">
+                    {FIELD_LABELS[field] || field}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/5">
+              {loading ? (
+                <tr>
+                   <td colSpan={visibleFields.length} className="py-24 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                         <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+                         <span className="text-[10px] font-bold text-[#dae2fd] opacity-20 uppercase tracking-widest">Compiling Unified Registry...</span>
+                      </div>
+                   </td>
+                </tr>
+              ) : reportData.length === 0 ? (
+                <tr>
+                   <td colSpan={visibleFields.length} className="py-24 text-center text-[#dae2fd] opacity-20 italic text-sm">
+                      No concurrent records detected in the specified cloud cluster.
+                   </td>
+                </tr>
+              ) : reportData.map((row, i) => (
+                <tr key={i} className="hover:bg-surface-highest/10 transition-colors group">
+                  {visibleFields.map(field => {
+                    const value = row[field];
+                    
+                    // Special styling for outcome
+                    if (field === 'status_resultado') {
+                       const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
+                       return (
+                         <td key={field} className="px-8 py-5">
+                            <span className={cn(
+                              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
+                              isOk ? "bg-brand-tertiary/10 text-brand-tertiary shadow-[0_0_8px_rgba(137,206,255,0.1)]" : "bg-brand-error/10 text-brand-error shadow-[0_0_8px_rgba(255,180,171,0.1)]"
+                            )}>
+                              <div className={cn("w-1.5 h-1.5 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
+                              {value}
+                            </span>
+                         </td>
+                       );
+                    }
 
-            {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                    <div className="w-10 h-10 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-                    <p className="text-white/20 text-sm font-mono tracking-widest uppercase">Joining Data Sources...</p>
-                </div>
-            ) : activeReport === 'uptime' ? (
-                <div className="flex-1 px-8">
-                    <div className="h-[400px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={reportData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                <XAxis 
-                                    dataKey="name" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{fill: '#444', fontSize: 10}} 
-                                    dy={10}
-                                />
-                                <YAxis 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{fill: '#444', fontSize: 10}} 
-                                />
-                                <Tooltip 
-                                    contentStyle={{backgroundColor: '#111', border: '1px solid #333', borderRadius: '12px'}}
-                                    itemStyle={{color: '#fff'}}
-                                />
-                                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                                    {reportData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3b82f6' : '#6366f1'} opacity={0.8} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            ) : (
-                <div className="flex-1 overflow-x-auto px-1">
-                    <table className="w-full text-left whitespace-nowrap">
-                        <thead>
-                            <tr className="border-b border-white/5">
-                                {visibleFields.map(field => (
-                                    <th key={field} className="px-6 py-4 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                                        {FIELD_LABELS[field] || field}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.03]">
-                            {reportData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={visibleFields.length} className="py-20 text-center text-white/10 italic">
-                                        No unified records found matching criteria.
-                                    </td>
-                                </tr>
-                            ) : (
-                                reportData.map((row, i) => (
-                                    <tr key={i} className="group hover:bg-white/[0.01]">
-                                        {visibleFields.map(field => {
-                                            const val = row[field] || row[field.toLowerCase()] || (field === 'Lote' ? row.lote : null) || (field === 'Lacre' ? row.lacre : null);
-                                            
-                                            // Estilizações especiais por campo
-                                            if (field === 'Meter Number') {
-                                                return <td key={field} className="px-6 py-4 font-mono text-blue-400 font-bold text-sm tracking-tighter">{val}</td>;
-                                            }
-                                            if (field === 'Error conclusion') {
-                                                return (
-                                                    <td key={field} className="px-6 py-4">
-                                                        <span className={cn(
-                                                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",
-                                                            val === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                                                        )}>
-                                                            {val}
-                                                        </span>
-                                                    </td>
-                                                );
-                                            }
-                                            if (field === 'Lote' || field === 'Lacre') {
-                                                return (
-                                                    <td key={field} className="px-6 py-4">
-                                                        <span className={cn(
-                                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border",
-                                                            val ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/10 border-transparent"
-                                                        )}>
-                                                            {val || 'N/A'}
-                                                        </span>
-                                                    </td>
-                                                );
-                                            }
-                                            if (field === 'Note') {
-                                                return (
-                                                    <td key={field} className="px-6 py-4">
-                                                        {val ? (
-                                                            <div className="flex items-center gap-2 text-white/40 text-[10px]">
-                                                                <StickyNote size={12} className="shrink-0 text-amber-500/50" />
-                                                                <span className="truncate max-w-[120px]">{val}</span>
-                                                            </div>
-                                                        ) : <span className="text-white/5">-</span>}
-                                                    </td>
-                                                );
-                                            }
+                    if (field === 'meter_number') {
+                       return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value}</td>;
+                    }
 
-                                            return (
-                                                <td key={field} className="px-6 py-4 text-white/40 text-xs font-mono tracking-tight">
-                                                    {formatCellValue(field, val)}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-          </div>
+                    if (field === 'data_hora') {
+                       return (
+                        <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-40 tabular-nums">
+                          {value ? format(new Date(value), 'yyyy-MM-dd HH:mm:ss') : '-'}
+                        </td>
+                       );
+                    }
+
+                    if (['temperatura_celcius', 'pressao_pa', 'umidade_percentual'].includes(field)) {
+                        return (
+                          <td key={field} className="px-8 py-5 text-xs font-bold text-white tracking-tight">
+                            {value}{field === 'temperatura_celcius' ? '°C' : field === 'umidade_percentual' ? '%' : ' Pa'}
+                          </td>
+                        );
+                    }
+
+                    return (
+                      <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-60">
+                        {value === null || value === undefined ? '-' : String(value)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        {/* Action Pagination Accent */}
+        <div className="p-6 bg-surface-highest/20 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em]">
+           <div className="flex items-center gap-6">
+              <span className="text-brand-primary">Archive State: Online</span>
+              <span>Loaded 100 of {reportData.length >= 100 ? '100+' : reportData.length} records</span>
+           </div>
+           <div className="flex gap-4">
+              <button className="flex items-center gap-1 hover:text-brand-primary transition-all disabled:opacity-5" disabled><ChevronLeft size={14} /> Previous Cluster</button>
+              <button className="flex items-center gap-1 hover:text-brand-primary transition-all">Next Cluster <ChevronRight size={14} /></button>
+           </div>
+        </div>
+      </section>
+
+      {/* Decorative Grid Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.02] blueprint-grid" />
     </div>
   );
 }
