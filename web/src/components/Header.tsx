@@ -16,8 +16,8 @@ export default function Header() {
         <div className="hidden md:flex items-center bg-surface-highest/30 px-4 py-2 rounded-full border border-outline-variant/10 group focus-within:border-brand-primary/30 transition-all">
           <Search className="text-[#dae2fd] opacity-40 mr-2" size={16} />
           <input 
-            className="bg-transparent border-none focus:ring-0 text-sm text-[#dae2fd] w-48 placeholder:text-[#dae2fd]/30" 
-            placeholder="Search instrumentation..." 
+            className="bg-transparent border-none focus:ring-0 text-sm text-[#dae2fd] w-48 placeholder:text-[#dae2fd]/30 font-body" 
+            placeholder="Procurar instrumentação..." 
             type="text"
           />
         </div>

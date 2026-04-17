@@ -9,7 +9,6 @@ import {
   LayoutDashboard, 
   Thermometer, 
   BarChart3, 
-  Columns, 
   Settings2, 
   HelpCircle, 
   LogOut,
@@ -17,7 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 
-const APP_VERSION = "2.0.0"; // Local fallback for stability
+const APP_VERSION = "2.0.1"; // Versão estabilizada PT-BR
 
 interface BenchConfig {
   id: number;
@@ -51,11 +50,10 @@ export default function Sidebar() {
   }, []);
 
   const navItems = [
-    { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { label: 'Climate Monitoring', href: '/climate', icon: Thermometer },
-    { label: 'Reports & Logs', href: '/reports', icon: BarChart3 },
-    { label: 'Column Config', href: '/settings', icon: Columns },
-    { label: 'System Settings', href: '/settings', icon: Settings2 },
+    { label: 'Painel de Controle', href: '/', icon: LayoutDashboard },
+    { label: 'Monitoramento Climático', href: '/climate', icon: Thermometer },
+    { label: 'Relatórios e Registros', href: '/reports', icon: BarChart3 },
+    { label: 'Configurações', href: '/settings', icon: Settings2 },
   ];
 
   return (
@@ -67,8 +65,8 @@ export default function Sidebar() {
              <Cpu className="text-brand-primary" size={20} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight truncate">Bench Control</h2>
-            <p className="text-[10px] uppercase tracking-widest text-[#dae2fd] opacity-60">Station ID: 08-A</p>
+            <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight truncate">Controle de Bancada</h2>
+            <p className="text-[10px] uppercase tracking-widest text-[#dae2fd] opacity-60">Estação ID: 08-A</p>
           </div>
         </div>
       </div>
@@ -103,10 +101,10 @@ export default function Sidebar() {
 
         {/* Live Benches */}
         <div className="pt-6 pb-2 px-4">
-          <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-[0.2em] mb-3">Live Benches</p>
+          <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-[0.2em] mb-3">Bancadas Online</p>
           <div className="space-y-1">
             {benches.length === 0 ? (
-               <div className="px-3 py-2 text-[10px] text-white/20 italic">Initializing benches...</div>
+               <div className="px-3 py-2 text-[10px] text-white/20 italic">Inicializando bancadas...</div>
             ) : benches.map((bench) => {
               const benchHref = `/bancada/${bench.id}`;
               const isActive = pathname === benchHref;
@@ -140,16 +138,16 @@ export default function Sidebar() {
           className="flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:opacity-100 rounded-xl transition-all text-sm font-medium"
         >
           <HelpCircle size={18} className="flex-shrink-0" />
-          <span>Support Center</span>
+          <span>Suporte Técnico</span>
         </Link>
         <button className="w-full flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:text-brand-error transition-all text-sm font-medium rounded-xl">
           <LogOut size={18} className="flex-shrink-0" />
-          <span>Logout System</span>
+          <span>Sair do Sistema</span>
         </button>
 
         {/* Version Badge */}
         <div className="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
-          <span className="text-[10px] text-white/20 uppercase tracking-widest">Version</span>
+          <span className="text-[10px] text-white/20 uppercase tracking-widest">Versão</span>
           <span className="text-[10px] font-mono font-bold text-white/30 bg-surface-highest/50 px-2 py-0.5 rounded border border-outline-variant/10">
             v{APP_VERSION}
           </span>

@@ -1,59 +1,36 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { 
-  Download, 
-  Calendar, 
-  Search,
-  Filter,
-  RefreshCw,
-  History,
-  TrendingUp,
-  Activity,
-  ChevronLeft,
-  ChevronRight,
-  Database,
-  CheckCircle2,
-  Zap,
-  Share2
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-
-const STITCH_PERIODS = ['Last 24h', '7 Days', '30 Days', 'Custom'];
-
-const FIELD_LABELS: Record<string, string> = {
-  'meter_number': 'Meter Serial',
-  'lote_produto': 'Lote (CSV)',
-  'lacre': 'Lacre',
-  'status_resultado': 'Conclusion Status',
-  'observacao': 'Obs/Notes',
-  'data_hora': 'Timestamp',
-  'ponto_teste': 'Test Point',
-  'vazao_real': 'Flow Rate',
-  'erro_relativo': 'Rel. Error',
-  'temperatura_celcius': 'Labtemperature',
-  'pressao_pa': 'Labpressure',
-  'umidade_percentual': 'Humidity',
-  'wme_value': 'WME'
-};
+import { 
+  BarChart3, 
+  Search, 
+  Download, 
+  Filter, 
+  Calendar,
+  Activity,
+  FileText,
+  RefreshCw,
+  Server,
+  Layers,
+  ChevronDown
+} from 'lucide-react';
 
 export default function ReportsPage() {
-  const [activePeriod, setActivePeriod] = useState('7 Days');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
 
   const fetchConfig = async () => {
-    const { data } = await supabase.from('app_config').select('admin_settings').eq('id', 1).single();
-    if (data?.admin_settings?.visible_fields) {
-      setVisibleFields(data.admin_settings.visible_fields);
-    } else {
-      setVisibleFields(['meter_number', 'lote_produto', 'status_resultado', 'data_hora']);
-    }
+    try {
+      const { data } = await supabase.from('app_config').select('*').eq('id', 1).single();
+      if (data) {
+        setVisibleFields(data.admin_settings?.visible_fields || ['meter_number', 'lote_produto', 'lacre', 'status_resultado']);
+      }
+    } catch (e) { console.error(e); }
   };
 
   const fetchData = async () => {
@@ -69,7 +46,7 @@ export default function ReportsPage() {
       const { data, error } = await query.order('data_hora', { ascending: false }).limit(100);
       
       if (error || !data || data.length === 0) {
-        console.warn('View "global_uniao" empty or failing. Attempting direct fallback to "data" table...');
+        console.warn('View "global_uniao" vazia ou com erro. Tentando fallback para tabela "data"...');
         const { data: directData, error: directError } = await supabase
           .from('data')
           .select('*, meter_number:"Meter Number", status_resultado:"Error conclusion", data_hora:"Save time"')
@@ -82,7 +59,7 @@ export default function ReportsPage() {
         setReportData(data);
       }
     } catch (e) {
-      console.error('Error fetching reports:', e);
+      console.error('Erro ao buscar relatórios:', e);
     } finally {
       setLoading(false);
     }
@@ -90,93 +67,120 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [activePeriod]);
+  }, []);
+
+  const FIELD_LABELS: Record<string, string> = {
+    'meter_number': 'Série Medidor',
+    'lote_produto': 'Lote (CSV)',
+    'lacre': 'Lacre Lote',
+    'status_resultado': 'Resultado',
+    'observacao': 'Notas/Obs',
+    'data_hora': 'Data/Hora Teste',
+    'ponto_teste': 'Ponto Q',
+    'vazao_real': 'Vazão',
+    'erro_relativo': 'Erro Rel.',
+    'temperatura_celcius': 'Temp Lab',
+    'pressao_pa': 'Pressão Lab',
+    'umidade_percentual': 'Umidade',
+    'status_tecnico': 'Status Técnico'
+  };
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-700">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
+      {/* Header Section */}
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-outline-variant/10 pb-8">
         <div>
-          <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight mb-2">
-            Industrial Intelligence
-          </h1>
-          <p className="text-[#dae2fd] opacity-40 font-medium italic">Unified Global Registry — Consensus of access logs and CSV production batches.</p>
+          <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight">Relatórios e Registros</h1>
+          <p className="text-[#dae2fd] opacity-40 mt-2 max-w-2xl font-body">Análise histórica consolidada de todos os ensaios industriais correlacionados com dados de batelada.</p>
+        </div>
+        <div className="flex gap-3">
+           <button onClick={fetchData} className="bg-surface-mid border border-outline-variant/10 text-[#dae2fd] text-xs font-bold px-6 py-3 rounded-xl flex items-center gap-3 hover:bg-surface-highest transition-all">
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> ATUALIZAR
+           </button>
+           <button className="machined-gradient text-white font-extrabold text-[10px] tracking-widest uppercase px-8 py-3 rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2">
+              <Download size={14} /> EXPORTAR RELATÓRIO
+           </button>
+        </div>
+      </header>
+
+      {/* KPI Analysis Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 flex flex-col justify-between">
+          <div className="flex items-center gap-2 text-brand-primary opacity-60 mb-4">
+            <Activity size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Registros Hoje</span>
+          </div>
+          <div>
+            <h2 className="text-4xl font-bold text-white font-headline">{reportData.length}</h2>
+            <p className="text-[10px] text-brand-tertiary font-bold mt-1">+12% vs Ontem</p>
+          </div>
+        </div>
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 flex flex-col justify-between">
+          <div className="flex items-center gap-2 text-brand-tertiary opacity-60 mb-4">
+            <FileText size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Eficiência Global</span>
+          </div>
+          <div>
+            <h2 className="text-4xl font-bold text-white font-headline">98.4%</h2>
+            <p className="text-[10px] text-brand-tertiary font-bold mt-1">Acima da Meta</p>
+          </div>
+        </div>
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 col-span-2 flex items-center justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-brand-primary opacity-40">
+              <Layers size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Integridade de Dados (Supabase)</span>
+            </div>
+            <div className="flex items-center gap-6">
+               <div className="flex flex-col">
+                  <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest mb-1">Status do Sinc</span>
+                  <div className="flex items-center gap-2 text-brand-tertiary text-lg font-bold">
+                    <div className="w-2 h-2 rounded-full bg-brand-tertiary animate-pulse" />
+                    CORRELACIONADO
+                  </div>
+               </div>
+               <div className="flex flex-col border-l border-outline-variant/10 pl-6">
+                  <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest mb-1">Processamento</span>
+                  <span className="text-lg font-bold text-white">HI-DEF</span>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls Section */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="p-1.5 bg-surface-mid border border-outline-variant/10 rounded-2xl flex gap-1">
+           <button className="px-6 py-2.5 rounded-xl bg-surface-highest text-brand-primary text-[10px] font-bold uppercase tracking-widest shadow-lg">Dados Consolidados</button>
+           <button className="px-6 py-2.5 rounded-xl text-[#dae2fd] opacity-40 hover:opacity-100 text-[10px] font-bold uppercase tracking-widest transition-all">Análise Técnica</button>
         </div>
         
-        <div className="flex items-center gap-3 bg-surface-mid p-1.5 rounded-xl border border-outline-variant/10">
-          {STITCH_PERIODS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActivePeriod(t)}
-              className={cn(
-                "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
-                activePeriod === t ? "bg-surface-highest text-brand-primary shadow-lg" : "text-[#dae2fd] opacity-40 hover:opacity-100"
-              )}
-            >
-              {t}
-            </button>
-          ))}
+        <div className="flex gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary opacity-40" size={16} />
+            <input 
+              type="text" 
+              placeholder="Pesquisar por Medidor ou Lote..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && fetchData()}
+              className="w-full bg-surface-mid border border-outline-variant/10 rounded-xl py-3 pl-12 pr-4 text-xs text-[#dae2fd] focus:ring-1 focus:ring-brand-primary placeholder:text-[#dae2fd]/20 transition-all font-body"
+            />
+          </div>
+          <button className="bg-surface-mid border border-outline-variant/10 text-[#dae2fd]/60 p-3 rounded-xl hover:bg-surface-highest transition-all">
+            <Filter size={18} />
+          </button>
         </div>
       </div>
 
-      {/* KPI Stats Mini-Header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        {[
-          { label: 'Synchronized Records', value: reportData.length, icon: Database, color: 'text-brand-primary' },
-          { label: 'Data Integrity', value: '100%', icon: CheckCircle2, color: 'text-brand-tertiary' },
-          { label: 'Processing Delay', value: '0.4s', icon: Zap, color: 'text-brand-primary' },
-          { label: 'Consensus Mode', value: 'Direct', icon: Share2, color: 'text-brand-tertiary' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-surface-mid p-5 rounded-2xl border border-outline-variant/5 flex items-center gap-4 group hover:bg-surface-highest transition-all">
-             <div className="w-10 h-10 rounded-xl bg-surface-highest/50 flex items-center justify-center">
-                <stat.icon size={20} className={stat.color} />
-             </div>
-             <div>
-                <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest">{stat.label}</p>
-                <div className="text-xl font-bold text-white">{stat.value}</div>
-             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Main Table Interface */}
+      {/* Main Consolidated Table */}
       <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl">
-        <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-surface-highest/20 border-b border-outline-variant/10 relative">
-          <div className="flex items-center gap-3">
-             <div className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
-             <h2 className="text-lg font-bold text-brand-primary font-headline">Consolidated Production Stream</h2>
-          </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-             <div className="relative flex-1 md:w-72">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dae2fd] opacity-20" size={16} />
-                <input 
-                   value={searchTerm}
-                   onChange={(e) => setSearchTerm(e.target.value)}
-                   onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                   className="w-full bg-surface-lowest border border-outline-variant/10 rounded-xl py-2.5 pl-12 pr-4 text-xs text-[#dae2fd] focus:ring-1 focus:ring-brand-primary transition-all placeholder:text-[#dae2fd]/20" 
-                   placeholder="Search Serial, Batch or ID..." 
-                   type="text"
-                />
-             </div>
-             <button 
-                onClick={fetchData} 
-                className="p-2.5 bg-surface-highest/50 border border-outline-variant/10 rounded-xl text-[#dae2fd] hover:text-brand-primary transition-all active:scale-95"
-             >
-                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-             </button>
-             <button className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-background-deep font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95">
-                <Download size={14} /> Export Report
-             </button>
-          </div>
-        </div>
-
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-highest/30">
                 {visibleFields.map(field => (
-                  <th key={field} className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#dae2fd] opacity-30">
+                  <th key={field} className="px-8 py-6 text-[10px] font-bold tracking-[0.2em] text-[#dae2fd] opacity-30 uppercase">
                     {FIELD_LABELS[field] || field}
                   </th>
                 ))}
@@ -185,87 +189,60 @@ export default function ReportsPage() {
             <tbody className="divide-y divide-outline-variant/5">
               {loading ? (
                 <tr>
-                   <td colSpan={visibleFields.length} className="py-24 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                         <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-                         <span className="text-[10px] font-bold text-[#dae2fd] opacity-20 uppercase tracking-widest">Compiling Unified Registry...</span>
-                      </div>
+                   <td colSpan={10} className="py-32 text-center text-[#dae2fd] opacity-20 italic">
+                      Sincronizando registros industriais...
                    </td>
                 </tr>
               ) : reportData.length === 0 ? (
                 <tr>
-                   <td colSpan={visibleFields.length} className="py-24 text-center text-[#dae2fd] opacity-20 italic text-sm">
-                      No concurrent records detected in the specified cloud cluster.
+                   <td colSpan={10} className="py-24 text-center text-[#dae2fd] opacity-20 italic text-sm">
+                      Nenhum registro correlacionado encontrado. Verifique os filtros ou a view SQL.
                    </td>
                 </tr>
               ) : reportData.map((row, i) => (
-                <tr key={i} className="hover:bg-surface-highest/10 transition-colors group">
+                <tr key={i} className="hover:bg-surface-highest/5 transition-colors group">
                   {visibleFields.map(field => {
                     const value = row[field];
-                    
-                    // Special styling for outcome
                     if (field === 'status_resultado') {
-                       const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
-                       return (
-                         <td key={field} className="px-8 py-5">
-                            <span className={cn(
-                              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
-                              isOk ? "bg-brand-tertiary/10 text-brand-tertiary shadow-[0_0_8px_rgba(137,206,255,0.1)]" : "bg-brand-error/10 text-brand-error shadow-[0_0_8px_rgba(255,180,171,0.1)]"
-                            )}>
-                              <div className={cn("w-1.5 h-1.5 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
-                              {value}
-                            </span>
-                         </td>
-                       );
-                    }
-
-                    if (field === 'meter_number') {
-                       return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value}</td>;
-                    }
-
-                    if (field === 'data_hora') {
-                       return (
-                        <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-40 tabular-nums">
-                          {value ? format(new Date(value), 'yyyy-MM-dd HH:mm:ss') : '-'}
+                      const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
+                      return (
+                        <td key={field} className="px-8 py-5">
+                          <span className={cn(
+                            "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
+                            isOk ? "bg-brand-tertiary/10 text-brand-tertiary shadow-[0_0_8px_rgba(137,206,255,0.05)]" : "bg-brand-error/10 text-brand-error shadow-[0_0_8px_rgba(255,180,171,0.05)]"
+                          )}>
+                            <div className={cn("w-1.5 h-1.5 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
+                            {value}
+                          </span>
                         </td>
-                       );
+                      );
                     }
-
-                    if (['temperatura_celcius', 'pressao_pa', 'umidade_percentual'].includes(field)) {
-                        return (
-                          <td key={field} className="px-8 py-5 text-xs font-bold text-white tracking-tight">
-                            {value}{field === 'temperatura_celcius' ? '°C' : field === 'umidade_percentual' ? '%' : ' Pa'}
-                          </td>
-                        );
-                    }
-
-                    return (
-                      <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-60">
-                        {value === null || value === undefined ? '-' : String(value)}
-                      </td>
-                    );
+                    if (field === 'data_hora') return <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-40 tabular-nums">{value ? format(new Date(value), 'yyyy-MM-dd HH:mm:ss') : '-'}</td>;
+                    if (field === 'meter_number') return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value}</td>;
+                    
+                    return <td key={field} className="px-8 py-5 text-xs text-[#dae2fd] opacity-60">{value === null || value === undefined ? '-' : String(value)}</td>;
                   })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        {/* Action Pagination Accent */}
+        
+        {/* Pagination Console */}
         <div className="p-6 bg-surface-highest/20 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em]">
-           <div className="flex items-center gap-6">
-              <span className="text-brand-primary">Archive State: Online</span>
-              <span>Loaded 100 of {reportData.length >= 100 ? '100+' : reportData.length} records</span>
+           <div className="flex items-center gap-8">
+              <span>Streaming: Supabase-Cloud</span>
+              <span className="text-brand-primary">Exibindo {reportData.length} registros correlacionados</span>
            </div>
            <div className="flex gap-4">
-              <button className="flex items-center gap-1 hover:text-brand-primary transition-all disabled:opacity-5" disabled><ChevronLeft size={14} /> Previous Cluster</button>
-              <button className="flex items-center gap-1 hover:text-brand-primary transition-all">Next Cluster <ChevronRight size={14} /></button>
+              <button className="hover:text-brand-primary transition-all">Anterior</button>
+              <button className="hover:text-brand-primary transition-all uppercase">Carregar mais <ChevronDown size={14} className="inline ml-1" /></button>
            </div>
         </div>
       </section>
 
-      {/* Decorative Grid Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.02] blueprint-grid" />
+      {/* Decorative Grid Accent */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03] blueprint-grid" />
     </div>
   );
 }

@@ -5,11 +5,12 @@ import {
   Save, AlertTriangle, CheckCircle2, Database, Clock, Server, 
   Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
   RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare,
-  Lock, Unlock, Shield, EyeOff, Monitor, FileImage, Cpu
+  Lock, Unlock, Shield, EyeOff, Monitor, FileImage, Cpu, ArrowLeft
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 interface BenchPath {
   data: string;
@@ -28,32 +29,30 @@ interface CSVConfig {
 }
 
 const DISPLAY_FIELDS = [
-  { id: 'meter_number', label: 'Meter Serial', group: 'Basic' },
+  { id: 'meter_number', label: 'Série do Medidor', group: 'Básico' },
   { id: 'lote_produto', label: 'Lote (CSV)', group: 'CSV' },
   { id: 'lacre', label: 'Lacre (CSV)', group: 'CSV' },
-  { id: 'status_resultado', label: 'Status Result', group: 'Basic' },
-  { id: 'observacao', label: 'Notes/Obs', group: 'Basic' },
-  { id: 'data_hora', label: 'Test Time', group: 'Basic' },
-  { id: 'data_access', label: 'Access Time', group: 'Technical' },
-  { id: 'id_mark_bancada', label: 'Bench ID Mark', group: 'Technical' },
-  { id: 'cod_lacre', label: 'Cod. Lacre (CSV)', group: 'CSV' },
+  { id: 'status_resultado', label: 'Status Resultado', group: 'Básico' },
+  { id: 'observacao', label: 'Notas/Obs', group: 'Básico' },
+  { id: 'data_hora', label: 'Data/Hora Teste', group: 'Básico' },
+  { id: 'data_access', label: 'Data Access', group: 'Técnico' },
+  { id: 'id_mark_bancada', label: 'ID Mark Bancada', group: 'Técnico' },
+  { id: 'cod_lacre', label: 'Cód. Lacre (CSV)', group: 'CSV' },
   { id: 'seq_lote', label: 'Seq. Lote (CSV)', group: 'CSV' },
-  { id: 'csv_data_vinculo', label: 'Vinc. Date (CSV)', group: 'CSV' },
-  { id: 'cod_inmetro', label: 'Cod. Inmetro', group: 'CSV' },
+  { id: 'csv_data_vinculo', label: 'Data Vinc. (CSV)', group: 'CSV' },
+  { id: 'cod_inmetro', label: 'Cód. Inmetro', group: 'CSV' },
   { id: 'lote_inmetro', label: 'Lote Inmetro', group: 'CSV' },
-  { id: 'ponto_teste', label: 'Point (Qmax/min)', group: 'Technical' },
-  { id: 'vazao_real', label: 'Flow Rate', group: 'Technical' },
-  { id: 'erro_relativo', label: 'Rel. Error', group: 'Technical' },
-  { id: 'temperatura_celcius', label: 'Labtemperature', group: 'Technical' },
-  { id: 'pressao_pa', label: 'Labpressure', group: 'Technical' },
-  { id: 'umidade_percentual', label: 'Humidity', group: 'Technical' },
-  { id: 'status_tecnico', label: 'Tech Status', group: 'Technical' },
-  { id: 'composite_id', label: 'Composite ID', group: 'System' },
-  { id: 'bancada_id', label: 'Bench #', group: 'System' },
+  { id: 'ponto_teste', label: 'Ponto (Qmax/min)', group: 'Técnico' },
+  { id: 'vazao_real', label: 'Vazão', group: 'Técnico' },
+  { id: 'erro_relativo', label: 'Erro Rel.', group: 'Técnico' },
+  { id: 'temperatura_celcius', label: 'Temperatura Lab', group: 'Técnico' },
+  { id: 'pressao_pa', label: 'Pressão Lab', group: 'Técnico' },
+  { id: 'umidade_percentual', label: 'Umidade', group: 'Técnico' },
+  { id: 'status_tecnico', label: 'Status Técnico', group: 'Técnico' },
 ];
 
 const ADMIN_PIN = "1234";
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 
 export default function SettingsPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -87,7 +86,7 @@ export default function SettingsPage() {
           setCsvConfig(data.csv_config || { path: '', last_sync: null });
         }
       } catch (e) {
-        console.error('Error fetching config:', e);
+        console.error('Erro ao buscar config:', e);
       } finally {
         setLoading(false);
       }
@@ -104,12 +103,6 @@ export default function SettingsPage() {
       setAuthError(true);
       setPin("");
     }
-  };
-
-  const handleToggleField = (field: string) => {
-    setVisibleFields(prev => 
-      prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]
-    );
   };
 
   const moveField = (index: number, direction: 'up' | 'down') => {
@@ -158,7 +151,7 @@ export default function SettingsPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center p-4">
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -172,8 +165,8 @@ export default function SettingsPage() {
             <div className="w-12 h-12 bg-brand-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Lock className="text-brand-primary" size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-white font-headline">Administrative Control</h1>
-            <p className="text-xs text-[#dae2fd] opacity-40">Changes require administrative secure elevation.</p>
+            <h1 className="text-2xl font-bold text-white font-headline">Controle Administrativo</h1>
+            <p className="text-xs text-[#dae2fd] opacity-40">Alterações exigem elevação de acesso seguro.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
@@ -183,7 +176,7 @@ export default function SettingsPage() {
                   type={showPin ? "text" : "password"} 
                   value={pin}
                   onChange={e => setPin(e.target.value)}
-                  placeholder="Enter Administrator PIN"
+                  placeholder="Digite o PIN de Administrador"
                   className={cn(
                     "w-full bg-surface-lowest border-none rounded-xl py-4 px-5 text-on-surface focus:ring-2 focus:ring-brand-primary transition-all font-mono",
                     authError ? "ring-2 ring-brand-error/50" : ""
@@ -200,21 +193,29 @@ export default function SettingsPage() {
               </div>
               {authError && (
                 <p className="text-[10px] text-brand-error font-bold flex items-center gap-1 animate-pulse">
-                  <AlertTriangle size={12} /> Access Denied: Invalid Authentication Protocol
+                  <AlertTriangle size={12} /> Acesso Negado: PIN Inválido
                 </p>
               )}
             </div>
             
-            <button 
-              type="submit"
-              className="w-full machined-gradient py-4 rounded-xl text-black font-extrabold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
-            >
-              Verify Identity
-            </button>
+            <div className="flex gap-3">
+              <Link 
+                href="/"
+                className="flex-1 bg-surface-highest/50 py-4 rounded-xl text-white font-bold text-xs uppercase tracking-widest text-center hover:bg-surface-highest transition-all"
+              >
+                Cancelar
+              </Link>
+              <button 
+                type="submit"
+                className="flex-[2] machined-gradient py-4 rounded-xl text-black font-extrabold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all text-center"
+              >
+                Verificar
+              </button>
+            </div>
           </form>
 
           <p className="mt-8 text-[10px] text-center text-[#dae2fd] opacity-20 uppercase tracking-[0.1em]">
-            Secure Encryption Active — v{APP_VERSION}
+            Criptografia Ativa — v{APP_VERSION}
           </p>
         </motion.div>
       </div>
@@ -225,12 +226,12 @@ export default function SettingsPage() {
     <div className="p-8 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-outline-variant/10 pb-8">
         <div>
-          <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight">Administrative Control</h1>
-          <p className="text-[#dae2fd] opacity-40 mt-2 max-w-2xl font-body">Manage industrial infrastructure, data pipelines, and system-wide visibility metrics.</p>
+          <h1 className="text-4xl font-extrabold font-headline text-brand-primary tracking-tight">Configurações do Sistema</h1>
+          <p className="text-[#dae2fd] opacity-40 mt-2 max-w-2xl font-body">Gerencie a infraestrutura industrial, pipelines de dados e métricas de visibilidade.</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary">
           <Lock size={14} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Secure Session Active</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest">Sessão Segura Ativa</span>
         </div>
       </header>
 
@@ -244,71 +245,64 @@ export default function SettingsPage() {
                 <Layout size={24} />
               </div>
               <div>
-                <h3 className="text-xl font-bold font-headline text-white">Display Intelligence</h3>
-                <p className="text-xs text-[#dae2fd] opacity-40">Choose which database fields should be mapped and displayed in the main screens.</p>
+                <h3 className="text-xl font-bold font-headline text-white">Inteligência de Exibição</h3>
+                <p className="text-xs text-[#dae2fd] opacity-40">Escolha quais campos do banco de dados devem ser mapeados e exibidos nas telas principais.</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              {/* Ordered Fields */}
-              <div className="space-y-4">
-                 <p className="text-[10px] font-bold text-brand-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" /> Active Column Sequence
-                 </p>
-                 <div className="space-y-2">
-                   {visibleFields.map((fieldId, idx) => {
-                     const f = DISPLAY_FIELDS.find(df => df.id === fieldId);
-                     if (!f) return null;
-                     return (
-                       <div key={fieldId} className="group flex items-center gap-4 bg-surface-high border border-outline-variant/10 p-4 rounded-xl hover:bg-surface-highest transition-all shadow-sm">
-                         <div className="flex flex-col gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className="hover:text-brand-primary disabled:opacity-0"><ChevronUp size={14} /></button>
-                            <button onClick={() => moveField(idx, 'down')} disabled={idx === visibleFields.length - 1} className="hover:text-brand-primary disabled:opacity-0"><ChevronDown size={14} /></button>
-                         </div>
-                         <div className="flex-1">
-                            <div className="text-[9px] text-[#dae2fd] opacity-30 font-bold uppercase tracking-tight">{f.group}</div>
-                            <div className="text-sm font-semibold text-white">{f.label}</div>
-                         </div>
-                         <button onClick={() => handleToggleField(fieldId)} className="text-brand-primary hover:bg-brand-primary/10 p-2 rounded-lg transition-all">
-                            <CheckSquare size={18} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {DISPLAY_FIELDS.map(field => {
+                 const isVisible = visibleFields.includes(field.id);
+                 const index = visibleFields.indexOf(field.id);
+                 return (
+                   <div key={field.id} className={cn(
+                     "p-4 rounded-xl border transition-all flex items-center justify-between group",
+                     isVisible ? "bg-brand-primary/5 border-brand-primary/20" : "bg-surface-highest/10 border-outline-variant/5 opacity-50"
+                   )}>
+                      <div className="flex items-center gap-3">
+                         <button 
+                           onClick={() => {
+                             setVisibleFields(prev => 
+                               prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]
+                             );
+                           }}
+                           className={cn(
+                             "w-5 h-5 rounded border flex items-center justify-center transition-all",
+                             isVisible ? "bg-brand-primary border-brand-primary" : "border-outline-variant/30"
+                           )}
+                         >
+                            {isVisible && <CheckSquare size={14} className="text-black" />}
                          </button>
-                       </div>
-                     );
-                   })}
-                 </div>
-              </div>
-
-              {/* Inactive Fields */}
-              <div className="space-y-4">
-                 <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-[0.2em] mb-4">Hidden Data Pools</p>
-                 <div className="flex flex-wrap gap-2">
-                   {DISPLAY_FIELDS.filter(f => !visibleFields.includes(f.id)).map(f => (
-                     <button 
-                       key={f.id}
-                       onClick={() => handleToggleField(f.id)}
-                       className="px-4 py-2 bg-surface-high border border-outline-variant/10 rounded-xl text-xs font-medium text-[#dae2fd] opacity-50 hover:bg-surface-highest hover:opacity-100 hover:border-brand-primary/30 transition-all flex items-center gap-2"
-                     >
-                       <Plus size={14} /> {f.label}
-                     </button>
-                   ))}
-                 </div>
-              </div>
+                         <div>
+                            <p className="text-xs font-bold text-white">{field.label}</p>
+                            <p className="text-[9px] text-[#dae2fd] opacity-30 uppercase">{field.group}</p>
+                         </div>
+                      </div>
+                      
+                      {isVisible && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button onClick={(e) => { e.stopPropagation(); moveField(index, 'up'); }} className="p-1 hover:bg-white/10 rounded"><ChevronUp size={14} /></button>
+                           <button onClick={(e) => { e.stopPropagation(); moveField(index, 'down'); }} className="p-1 hover:bg-white/10 rounded"><ChevronDown size={14} /></button>
+                        </div>
+                      )}
+                   </div>
+                 );
+               })}
             </div>
           </div>
 
-          {/* External Assets Manager */}
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-6">
             <h3 className="text-xl font-bold font-headline text-white flex items-center gap-2">
               <Monitor size={20} className="text-brand-primary" />
-              Logo Upload
+              Upload de Logotipos
             </h3>
             <div className="border-2 border-dashed border-outline-variant/20 rounded-2xl p-10 flex flex-col items-center justify-center bg-surface-highest/10 hover:bg-surface-highest/20 transition-all group cursor-pointer">
                <div className="w-24 h-24 bg-surface-high rounded-xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform border border-outline-variant/10 shadow-lg">
                   <FileImage size={48} className="text-white opacity-20" />
                </div>
                <p className="text-sm font-bold text-white mb-2">Industrial_Bench_v2_Logo.svg</p>
-               <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase tracking-widest">Recommended: Vector (SVG)</p>
-               <button className="mt-8 px-8 py-3 bg-surface-high border border-outline-variant/20 rounded-xl text-[10px] font-bold uppercase tracking-widest text-[#dae2fd] hover:border-brand-primary/40 transition-all">Replace System Asset</button>
+               <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase tracking-widest">Recomendado: Vetor (SVG)</p>
+               <button className="mt-8 px-8 py-3 bg-surface-high border border-outline-variant/20 rounded-xl text-[10px] font-bold uppercase tracking-widest text-[#dae2fd] hover:border-brand-primary/40 transition-all">Substituir Ativo</button>
             </div>
           </div>
         </section>
@@ -316,25 +310,22 @@ export default function SettingsPage() {
         {/* Right Column: Bench Layouts & System Sync */}
         <aside className="col-span-12 lg:col-span-4 flex flex-col gap-8">
           
-          {/* Active Nodes Setup */}
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-8">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold font-headline text-white flex items-center gap-2">
-                <Cpu size={20} className="text-brand-primary" />
-                Bench Nodes
-              </h3>
-            </div>
+            <h3 className="text-xl font-bold font-headline text-white flex items-center gap-2">
+              <Cpu size={20} className="text-brand-primary" />
+              Nós de Bancada
+            </h3>
             <div className="space-y-4">
                {benches.map(bench => (
                  <div key={bench.id} className="bg-surface-high p-4 rounded-xl border border-outline-variant/5 hover:border-brand-primary/20 transition-all group">
                     <div className="flex justify-between items-start mb-4">
-                       <span className="text-[10px] font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded">NODE 0{bench.id}</span>
+                       <span className="text-[10px] font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded">NÓ 0{bench.id}</span>
                        <div className="w-2 h-2 rounded-full bg-brand-tertiary shadow-[0_0_8px_rgba(137,206,255,0.6)]" />
                     </div>
                     <h4 className="text-lg font-bold text-white mb-4">{bench.name}</h4>
                     <div className="space-y-4 overflow-hidden max-h-0 group-hover:max-h-[500px] transition-all duration-700 opacity-0 group-hover:opacity-100">
                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest pl-1">Data Path</label>
+                          <label className="text-[9px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest pl-1">Caminho de Dados</label>
                           <input 
                             value={bench.paths[0].data} 
                             onChange={e => updatePath(bench.id, 0, 'data', e.target.value)}
@@ -342,7 +333,7 @@ export default function SettingsPage() {
                           />
                        </div>
                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest pl-1">Technical Path</label>
+                          <label className="text-[9px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest pl-1">Caminho Técnico</label>
                           <input 
                             value={bench.paths[0].fullData} 
                             onChange={e => updatePath(bench.id, 0, 'fullData', e.target.value)}
@@ -351,7 +342,7 @@ export default function SettingsPage() {
                        </div>
                     </div>
                     <div className="mt-4 flex justify-between items-center">
-                       <span className="text-[10px] font-bold text-[#dae2fd] opacity-20 uppercase">Config. Protection Active</span>
+                       <span className="text-[10px] font-bold text-[#dae2fd] opacity-20 uppercase">Proteção Ativa</span>
                        <ChevronDown size={14} className="text-white/20 group-hover:rotate-180 transition-transform" />
                     </div>
                  </div>
@@ -359,23 +350,22 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Sync Latency */}
           <div className="bg-surface-mid p-8 rounded-2xl border border-outline-variant/10 space-y-6">
             <h3 className="text-lg font-bold font-headline text-white flex items-center gap-2">
               <RefreshCw size={18} className="text-brand-primary" />
-              Datalogger Latency
+              Latência do Datalogger
             </h3>
             <div className="space-y-4">
                <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-widest">Global Threshold</span>
-                    <span className="text-xs font-bold text-brand-primary">30 Minutes</span>
+                    <span className="text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-widest">Limite Global</span>
+                    <span className="text-xs font-bold text-brand-primary">30 Minutos</span>
                   </div>
                   <div className="h-1.5 w-full bg-surface-highest rounded-full overflow-hidden">
                      <div className="h-full bg-brand-primary w-[30%]" />
                   </div>
                </div>
-               <p className="text-[10px] text-[#dae2fd] opacity-30 leading-relaxed italic">System will mark bench as "IDLE" if no synchronization is detected within this window.</p>
+               <p className="text-[10px] text-[#dae2fd] opacity-30 leading-relaxed italic">O sistema marcará a bancada como "IDLE" se nenhuma sincronização for detectada neste intervalo.</p>
             </div>
           </div>
         </aside>
@@ -388,7 +378,7 @@ export default function SettingsPage() {
              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
              className="bg-brand-tertiary text-black px-6 py-4 rounded-xl font-bold flex items-center gap-2 shadow-xl"
            >
-              <CheckCircle2 size={18} /> Protocol Updated Successfully
+              <CheckCircle2 size={18} /> Protocolo Atualizado com Sucesso
            </motion.div>
         )}
         <button
@@ -396,7 +386,7 @@ export default function SettingsPage() {
           disabled={loading}
           className="flex items-center gap-3 machined-gradient px-10 py-5 rounded-[24px] text-black font-extrabold text-xs uppercase tracking-[0.2em] shadow-[0_12px_48px_rgba(53,125,241,0.4)] hover:scale-105 active:scale-95 transition-all"
         >
-          {loading ? <RefreshCw className="animate-spin" size={20} /> : <><Save size={20} /> Commit System Changes</>}
+          {loading ? <RefreshCw className="animate-spin" size={20} /> : <><Save size={20} /> Salvar Alterações</>}
         </button>
       </div>
     </div>
