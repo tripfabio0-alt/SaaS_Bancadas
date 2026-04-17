@@ -1,5 +1,5 @@
-export const APP_VERSION = '1.6.5';
-export const APP_BUILD_DATE = '2026-04-15';
+export const APP_VERSION = '1.7.8';
+export const APP_BUILD_DATE = '2026-04-17';
 
 export interface VersionEntry {
   version: string;
@@ -9,6 +9,51 @@ export interface VersionEntry {
 }
 
 export const CHANGELOG: VersionEntry[] = [
+  {
+    version: '1.7.8',
+    date: '2026-04-17',
+    type: 'fix',
+    changes: [
+      { type: 'fix',  description: 'Estabilidade: Correção do worker de build e mapeamento de tipos no console ADM' },
+      { type: 'feat', description: 'Produção: Versão final estável para publicação no GitHub' },
+    ],
+  },
+  {
+    version: '1.7.7',
+    date: '2026-04-16',
+    type: 'feat',
+    changes: [
+      { type: 'feat', description: 'Inteligência de Display: Reordenação dinâmica de colunas (↑ ↓) nas tabelas' },
+      { type: 'feat', description: 'Dados Totais: Exposição de 100% dos parâmetros técnicos (Pressão, Temp, Vazão)' },
+      { type: 'feat', description: 'Mapeamento CSV: Cobertura completa dos 8 campos do Relatório.csv (Inmetro, Sequencial, etc)' },
+    ],
+  },
+  {
+    version: '1.7.6',
+    date: '2026-04-16',
+    type: 'fix',
+    changes: [
+      { type: 'fix',  description: 'Estabilidade: Correção de parsing de aspas e erros de build na Vercel' },
+      { type: 'feat', description: 'Unified View: Implementação da visão global_uniao robusta' },
+    ],
+  },
+  {
+    version: '1.7.5',
+    date: '2026-04-15',
+    type: 'feat',
+    changes: [
+      { type: 'feat', description: 'Arquitetura Universal: Suporte a multi-partições de rede por bancada' },
+      { type: 'feat', description: 'Sincronizador: Bridge v6.0 com automação inteligente de lotes e lacres' },
+    ],
+  },
+  {
+    version: '1.6.5',
+    date: '2026-04-15',
+    type: 'fix',
+    changes: [
+      { type: 'fix',  description: 'Correção: Erro de importação de Lucide Icons' },
+    ],
+  },
   {
     version: '1.5.0',
     date: '2026-04-15',

@@ -6,6 +6,25 @@ import {
   Settings as SettingsIcon, Layout, Eye, Plus, Trash2, FileText, 
   FolderSearch, RefreshCw, Layers, ChevronUp, ChevronDown, CheckSquare
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface BenchPath {
+  data: string;
+  fullData: string;
+}
+
+interface BenchConfig {
+  id: number;
+  name: string;
+  paths: BenchPath[];
+}
+
+interface CSVConfig {
+  path: string;
+  last_sync: string | null;
+}
 
 const DISPLAY_FIELDS = [
   { id: 'meter_number', label: 'Meter Serial', group: 'Basic' },
@@ -113,7 +132,7 @@ export default function SettingsPage() {
     } : b));
   };
 
-  const updatePath = (benchId: number, pathIndex: number, field: keyof PathPair, value: string) => {
+  const updatePath = (benchId: number, pathIndex: number, field: keyof BenchPath, value: string) => {
     setBenches(benches.map(b => b.id === benchId ? {
       ...b,
       paths: b.paths.map((p, i) => i === pathIndex ? { ...p, [field]: value } : p)
@@ -178,25 +197,63 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {AVAILABLE_FIELDS.map(field => (
-              <button
-                key={field}
-                onClick={() => handleToggleField(field)}
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group",
-                  visibleFields.includes(field)
-                    ? "bg-indigo-500/10 border-indigo-500/30 text-white"
-                    : "bg-white/[0.02] border-white/5 text-white/30 hover:bg-white/[0.05]"
-                )}
-              >
-                <span className="text-xs font-bold truncate">{field}</span>
-                <Eye size={14} className={cn(
-                  "shrink-0 transition-opacity",
-                  visibleFields.includes(field) ? "opacity-100" : "opacity-20 group-hover:opacity-100"
-                )} />
-              </button>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+            {/* Active & Ordered */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest pl-2">Ordered Columns (Drag/Sort)</p>
+              <div className="space-y-2">
+                {visibleFields.map((fieldId, idx) => {
+                  const config = DISPLAY_FIELDS.find(f => f.id === fieldId);
+                  if (!config) return null;
+                  return (
+                    <div key={fieldId} className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/5 rounded-2xl group hover:bg-white/[0.05] transition-all">
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <button 
+                          onClick={() => moveField(idx, 'up')}
+                          disabled={idx === 0}
+                          className="p-1 hover:bg-white/10 rounded-md disabled:opacity-0 transition-all"
+                        >
+                          <ChevronUp size={14} className="text-white/40" />
+                        </button>
+                        <button 
+                          onClick={() => moveField(idx, 'down')}
+                          disabled={idx === visibleFields.length - 1}
+                          className="p-1 hover:bg-white/10 rounded-md disabled:opacity-0 transition-all"
+                        >
+                          <ChevronDown size={14} className="text-white/40" />
+                        </button>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[9px] text-indigo-400/50 font-bold uppercase tracking-tighter">{config.group}</div>
+                        <div className="text-sm font-bold text-white/80 leading-tight">{config.label}</div>
+                      </div>
+                      <button 
+                        onClick={() => handleToggleField(fieldId)}
+                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-all"
+                      >
+                        <CheckSquare size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Available to Add */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest pl-2">Available Fields (Hidden)</p>
+              <div className="flex flex-wrap gap-2">
+                {DISPLAY_FIELDS.filter(f => !visibleFields.includes(f.id)).map(field => (
+                  <button
+                    key={field.id}
+                    onClick={() => handleToggleField(field.id)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] font-bold text-white/30 hover:bg-white/5 hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <Plus size={12} /> {field.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -387,7 +444,7 @@ export default function SettingsPage() {
 
       <div className="flex items-center justify-center gap-3 text-white/10 text-xs pb-10">
           <Clock size={14} />
-          Universal Architecture Sync v6.0 Ready
+          Universal Architecture Sync v1.7.7 Ready
       </div>
     </div>
   );
