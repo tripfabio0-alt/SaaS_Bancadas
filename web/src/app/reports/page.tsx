@@ -114,7 +114,7 @@ export default function ReportsPage() {
         ].map((stat, i) => (
           <div key={i} className="bg-surface-mid p-5 rounded-2xl border border-outline-variant/5 flex items-center gap-4 group hover:bg-surface-highest transition-all">
              <div className="w-10 h-10 rounded-xl bg-surface-highest/50 flex items-center justify-center">
-                <span className={cn("material-icons", stat.color)} style={{ fontSize: '20px' }}>{stat.icon}</span>
+                <span className={cn("material-symbols-outlined", stat.color)} style={{ fontSize: '20px' }}>{stat.icon}</span>
              </div>
              <div>
                 <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-widest">{stat.label}</p>

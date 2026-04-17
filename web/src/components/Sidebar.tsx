@@ -42,8 +42,8 @@ export default function Sidebar() {
     { label: 'Dashboard', href: '/', icon: 'dashboard' },
     { label: 'Climate Monitoring', href: '/climate', icon: 'thermostat' },
     { label: 'Reports & Logs', href: '/reports', icon: 'analytics' },
-    { label: 'Column Config', href: '/config', icon: 'view_column' },
-    { label: 'Settings', href: '/settings', icon: 'settings_applications' },
+    { label: 'Column Config', href: '/settings', icon: 'view_column' },
+    { label: 'System Settings', href: '/settings', icon: 'settings_applications' },
   ];
 
   return (
@@ -52,7 +52,7 @@ export default function Sidebar() {
       <div className="px-6 mb-8">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-brand-primary/10 flex items-center justify-center">
-            <span className="material-icons text-brand-primary" style={{ fontSize: '20px' }}>precision_manufacturing</span>
+            <span className="material-symbols-outlined text-brand-primary" style={{ fontSize: '20px' }}>precision_manufacturing</span>
           </div>
           <div>
             <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight">Bench Control</h2>
@@ -77,7 +77,7 @@ export default function Sidebar() {
               )}
             >
               <span className={cn(
-                "material-icons transition-transform group-hover:scale-110",
+                "material-symbols-outlined transition-transform group-hover:scale-110",
                 isActive ? "text-brand-primary" : "text-[#dae2fd]/60"
               )}>
                 {item.icon}
@@ -125,11 +125,11 @@ export default function Sidebar() {
           href="/help" 
           className="flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:opacity-100 rounded-lg transition-all text-sm font-medium"
         >
-          <span className="material-icons text-lg">help</span>
+          <span className="material-symbols-outlined text-lg">help</span>
           <span>Support Center</span>
         </Link>
         <button className="w-full flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:text-brand-error transition-all text-sm font-medium rounded-lg">
-          <span className="material-icons text-lg">logout</span>
+          <span className="material-symbols-outlined text-lg">logout</span>
           <span>Logout System</span>
         </button>
 
