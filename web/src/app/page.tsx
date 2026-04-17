@@ -36,9 +36,20 @@ export default function Home() {
       setLoading(true);
       
       // 1. Fetch Summary Data (Counts)
-      const { data: records } = await supabase.from('global_uniao').select('*').limit(200);
+      let { data: records, error: viewError } = await supabase.from('global_uniao').select('*').limit(200);
       
-      if (records) {
+      // Fallback if view fails
+      if (viewError || !records || records.length === 0) {
+        console.warn('Dashboard: "global_uniao" empty or failing. Using raw data fallback.');
+        const { data: rawRecords } = await supabase
+          .from('data')
+          .select('*, status_resultado:"Error conclusion", temperatura_celcius:"temperature", umidade_percentual:"umidade"')
+          .order('sync_at', { ascending: false })
+          .limit(200);
+        records = rawRecords;
+      }
+      
+      if (records && records.length > 0) {
         const approvedSet = new Set(['Aprovado', 'APROVADO', 'OK', 'Pass']);
         const approved = records.filter(r => approvedSet.has(r.status_resultado)).length;
         const rejected = records.length - approved;
@@ -53,22 +64,22 @@ export default function Home() {
           latestTemp: latestWithClimate?.temperatura_celcius || 0,
           latestHum: latestWithClimate?.umidade_percentual || 0
         }));
+        setRecentRecords(records.slice(0, 6)); // Update stream with whatever we got
       }
-
-      // 2. Fetch Recent Log
-      const { data: recent } = await supabase
-        .from('global_uniao')
-        .select('*')
-        .order('data_hora', { ascending: false })
-        .limit(6);
-      setRecentRecords(recent || []);
 
       // 3. Bench Status
       const { data: config } = await supabase.from('app_config').select('*').eq('id', 1).single();
       const benchConfigs = config?.benches_config || [];
       
       const benchStatusPromises = benchConfigs.map(async (b: any) => {
-        const { data: latest } = await supabase.from('data').select('sync_at').eq('bancada_id', b.id).order('sync_at', { ascending: false }).limit(1);
+        // Try both number and string for bancada_id for robustness
+        const { data: latest } = await supabase
+          .from('data')
+          .select('sync_at')
+          .or(`bancada_id.eq.${b.id},bancada_id.eq."${b.id}"`)
+          .order('sync_at', { ascending: false })
+          .limit(1);
+          
         const lastSync = latest?.[0]?.sync_at;
         const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
         return { ...b, isOnline };
@@ -79,7 +90,7 @@ export default function Home() {
       setSummary(prev => ({ ...prev, onlineCount: resolvedBenches.filter(b => b.isOnline).length }));
 
     } catch (err) {
-      console.error(err);
+      console.error('Dashboard Fetch Error:', err);
     } finally {
       setLoading(false);
     }

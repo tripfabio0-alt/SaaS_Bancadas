@@ -63,13 +63,24 @@ export default function ReportsPage() {
       let query = supabase.from('global_uniao').select('*');
       
       if (searchTerm) {
-        // Simple search on meter number or lote
         query = query.or(`meter_number.ilike.%${searchTerm}%,lote_produto.ilike.%${searchTerm}%`);
       }
       
       const { data, error } = await query.order('data_hora', { ascending: false }).limit(100);
-      if (error) throw error;
-      setReportData(data || []);
+      
+      if (error || !data || data.length === 0) {
+        console.warn('View "global_uniao" empty or failing. Attempting direct fallback to "data" table...');
+        const { data: directData, error: directError } = await supabase
+          .from('data')
+          .select('*, meter_number:"Meter Number", status_resultado:"Error conclusion", data_hora:"Save time"')
+          .order('sync_at', { ascending: false })
+          .limit(100);
+        
+        if (directError) throw directError;
+        setReportData(directData || []);
+      } else {
+        setReportData(data);
+      }
     } catch (e) {
       console.error('Error fetching reports:', e);
     } finally {

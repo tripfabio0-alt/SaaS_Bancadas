@@ -31,15 +31,16 @@ def map_columns(df, is_full_data=False):
         'Note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
     }
     
-    # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data)
+    # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data / Unified Labels)
+    # Harmonizado com Dashboard: temperatura_celcius, pressao_pa, umidade_percentual, vazao_real, ponto_teste
     tech_map = {
-        'test_point': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
-        'flow_rate': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
-        'error_relativo': ['Error', 'Erro', 'Erro relativo', 'Relative Error'],
-        'temperature': ['Labtemperature', 'Temperature', 'Temperatura', 'Temp', 'T'],
-        'pressure': ['Labpressure', 'Pressure', 'Pressão', 'Pressao', 'P'],
-        'umidade': ['Humidity', 'Umidade', 'Humidade', 'H', 'RH', 'Umid'],
-        'wme': ['WME', 'Weighted Mean Error', 'Erro Medio Ponderado', 'Erro Ponderado'],
+        'ponto_teste': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
+        'vazao_real': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
+        'erro_relativo': ['Error', 'Erro', 'Erro relativo', 'Relative Error'],
+        'temperatura_celcius': ['Labtemperature', 'Temperature', 'Temperatura', 'Temp', 'T'],
+        'pressao_pa': ['Labpressure', 'Pressure', 'Pressão', 'Pressao', 'P'],
+        'umidade_percentual': ['Humidity', 'Umidade', 'Humidade', 'H', 'RH', 'Umid'],
+        'wme_value': ['WME', 'Weighted Mean Error', 'Erro Medio Ponderado', 'Erro Ponderado'],
         'status_tecnico': ['Status', 'Status técnico', 'Tech Status']
     }
 
@@ -70,7 +71,7 @@ def map_columns(df, is_full_data=False):
                 if v_norm in cols_map:
                     final_mapping[cols_map[v_norm]] = target
                     break
-
+    
     if final_mapping:
         df = df.rename(columns=final_mapping)
     
@@ -211,7 +212,7 @@ def sync_relatorio_csv(csv_path):
 
 def main():
     print("=" * 60)
-    print("  Sincronizador Universal SaaS Bancadas v6.0")
+    print("  Sincronizador Universal SaaS Bancadas v7.0")
     print("=" * 60)
 
     while True:
