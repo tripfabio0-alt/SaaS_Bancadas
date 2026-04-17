@@ -22,17 +22,16 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def map_columns(df, is_full_data=False):
     """Mapeia colunas do Access para o padrão do Supabase com normalização canônica."""
-    # 1. Mapeamento de Meta-dados (Tabela data)
+    # 1. Mapeamento de Meta-dados (Tabela data) - USANDO MINÚSCULAS PARA POSTGRES
     metadata_map = {
-        'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
-        'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
-        'Error conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
-        'Save time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
-        'Note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
+        'id_mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
+        'meter_number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
+        'error_conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
+        'save_time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
+        'note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
     }
     
     # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data / Unified Labels)
-    # Harmonizado com Dashboard: temperatura_celcius, pressao_pa, umidade_percentual, vazao_real, ponto_teste
     tech_map = {
         'ponto_teste': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
         'vazao_real': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
@@ -50,7 +49,7 @@ def map_columns(df, is_full_data=False):
     # Executar Mapeamento de Metadados
     for target, variations in metadata_map.items():
         found = False
-        target_norm = target.lower()
+        target_norm = target.lower().replace('_', ' ')
         if target_norm in cols_map:
             final_mapping[cols_map[target_norm]] = target
             found = True
@@ -78,10 +77,10 @@ def map_columns(df, is_full_data=False):
     if is_full_data:
         # No Full Data, geramos um payload com chaves canônicas + campos originais não mapeados
         df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
-        return df[['ID Mark', 'raw_payload']].copy()
+        return df[['id_mark', 'raw_payload']].copy() if 'id_mark' in df.columns else df.copy()
     else:
         # No Data (Main), garantimos apenas os campos de meta-dados necessários
-        required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'Note']
+        required = ['id_mark', 'meter_number', 'error_conclusion', 'save_time', 'note']
         for col in required:
             if col not in df.columns:
                 df[col] = None
@@ -132,29 +131,31 @@ def sync_access_file(db_path, bancada_id):
                 df['bancada_id'] = int(bancada_id)
                 df['sync_at'] = datetime.utcnow().isoformat() + 'Z'
 
-                if not is_full_data_file and 'Save time' in df.columns and df['Save time'].notnull().any():
+                if not is_full_data_file and 'save_time' in df.columns and df['save_time'] is not None:
                     try:
-                        df['timestamp'] = pd.to_datetime(df['Save time']).dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                        df['timestamp'] = pd.to_datetime(df['save_time']).dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
                     except Exception:
                         df['timestamp'] = df['sync_at']
                 
-                df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['ID Mark'].astype(str)
+                if 'id_mark' in df.columns:
+                    df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['id_mark'].astype(str)
                 
                 # Incremental
                 table_state_key = f"{state_key}_{table_name}"
                 seen_ids = set(state.get(table_state_key, []))
-                df_new = df[~df['ID Mark'].astype(str).isin(seen_ids)]
                 
-                if df_new.empty: continue
+                if 'id_mark' in df.columns:
+                    df_new = df[~df['id_mark'].astype(str).isin(seen_ids)]
+                    if df_new.empty: continue
+                    
+                    print(f"   [Bancada {bancada_id}] Sincronizando {len(df_new)} novos registros de '{table_name}'...")
+                    records = df_new.to_dict('records')
+                    for i in range(0, len(records), 300):
+                        supabase.table(target_table).upsert(records[i:i+300], on_conflict='composite_id').execute()
+                    
+                    state[table_state_key] = list(seen_ids.union(set(df_new['id_mark'].astype(str).tolist())))
+                    save_state(state)
                 
-                print(f"   [Bancada {bancada_id}] Sincronizando {len(df_new)} novos registros de '{table_name}'...")
-                
-                records = df_new.to_dict('records')
-                for i in range(0, len(records), 300):
-                    supabase.table(target_table).upsert(records[i:i+300], on_conflict='composite_id').execute()
-                
-                state[table_state_key] = list(seen_ids.union(set(df_new['ID Mark'].astype(str).tolist())))
-                save_state(state)
             except Exception as e:
                 print(f"   [!] Erro na tabela {table_name}: {e}")
         conn.close()
@@ -168,10 +169,7 @@ def sync_relatorio_csv(csv_path):
 
     print(f"   [CSV] Sincronizando Vinculo de Lacres: {csv_path}...")
     try:
-        # Detectar se o arquivo mudou via hash simples (opcional, aqui faremos incremental por LACRE)
-        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=4) # Pula o cabeçalho decorativo
-        
-        # Limpar nomes de colunas
+        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=4)
         df.columns = [c.strip() for c in df.columns]
         
         mapping = {
@@ -191,14 +189,11 @@ def sync_relatorio_csv(csv_path):
         records = df.to_dict('records')
         print(f"   [CSV] Preparando {len(records)} lacres para upload...")
         
-        # Upsert em pedaços para evitar timeout (tabela vinculo_lacre)
         for i in range(0, len(records), 500):
             supabase.table('vinculo_lacre').upsert(records[i:i+500], on_conflict='lacre').execute()
-            if i % 5000 == 0: print(f"      - {i} processados...")
             
         print("   [CSV] OK: Sincronização de Lacres concluída.")
         
-        # Atualizar o timestamp de última sincronização no app_config
         new_last_sync = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         supabase.table('app_config').update({
             "csv_config": {
@@ -212,20 +207,18 @@ def sync_relatorio_csv(csv_path):
 
 def main():
     print("=" * 60)
-    print("  Sincronizador Universal SaaS Bancadas v7.0")
+    print("  Sincronizador Universal SaaS Bancadas v8.0")
     print("=" * 60)
 
     while True:
         print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Iniciando ciclo...")
         try:
-            # 1. Buscar Configurações do Supabase
             config_res = supabase.table('app_config').select('benches_config, csv_config').eq('id', 1).single().execute()
             config = config_res.data
             
             benches = config.get('benches_config', [])
             csv_cfg = config.get('csv_config', {})
             
-            # 2. Sincronizar Bancadas
             for bench in benches:
                 b_id = bench['id']
                 b_name = bench['name']
@@ -234,7 +227,6 @@ def main():
                     sync_access_file(paths.get('data'), b_id)
                     sync_access_file(paths.get('fullData'), b_id)
             
-            # 3. Sincronizar CSV de Terceiros
             if csv_cfg and csv_cfg.get('path'):
                 sync_relatorio_csv(csv_cfg['path'])
 

@@ -1,29 +1,27 @@
 -- ==========================================================
--- SCRIPT DE RECONSTRUÇÃO V2: Correlação Industrial Total
+-- SCRIPT DE RECONSTRUÇÃO V2.1: Correção de Case-Sensitivity
 -- ==========================================================
--- Este script resolve a falha de correlação entre o Access (Data) 
--- e o Relatório CSV (Lote) garantindo que espaços e letras não
--- impeçam a união dos 341.000 registros.
+-- Este script corrige os nomes das colunas para minúsculas,
+-- resolvendo o erro de "column does not exist" no PostgreSQL.
 
--- 1. Permissões de Leitura (Garantir acesso do SaaS)
+-- 1. Permissões de Leitura
 GRANT SELECT ON public.data TO anon, authenticated, service_role;
 GRANT SELECT ON public.full_data TO anon, authenticated, service_role;
 GRANT SELECT ON public.vinculo_lacre TO anon, authenticated, service_role;
 GRANT SELECT ON public.app_config TO anon, authenticated, service_role;
 
--- 2. Recriação da View de Unificação com Lógica Robusta
--- O segredo aqui é o TRIM() e UPPER() nas chaves de junção.
+-- 2. Recriação da View de Unificação com Colunas em Minúsculas
 DROP VIEW IF EXISTS public.global_uniao;
 
 CREATE VIEW public.global_uniao AS
 SELECT 
     d.composite_id,
     d.bancada_id,
-    d."ID Mark" as id_mark,
-    TRIM(d."Meter Number") as meter_number,
-    d."Error conclusion" as status_resultado,
-    d."Save time" as data_hora,
-    d."Note" as observacao,
+    d."id_mark" as id_mark,
+    TRIM(d."meter_number") as meter_number,
+    d."error_conclusion" as status_resultado,
+    d."save_time" as data_hora,
+    d."note" as observacao,
     cl.lote_produto,
     cl.lacre,
     cl.data_vinculo as csv_data_vinculo,
@@ -40,11 +38,8 @@ SELECT
     COALESCE(f.raw_payload->>'umidade_percentual', f.raw_payload->>'umidade') as umidade_percentual,
     (f.raw_payload->>'status_tecnico') as status_tecnico
 FROM public.data d
-LEFT JOIN public.vinculo_lacre cl ON UPPER(TRIM(d."Meter Number")) = UPPER(TRIM(cl.lacre))
+LEFT JOIN public.vinculo_lacre cl ON UPPER(TRIM(d."meter_number")) = UPPER(TRIM(cl.lacre))
 LEFT JOIN public.full_data f ON d.composite_id = f.composite_id;
 
--- 3. Garantir Permissões na Nova View
+-- 3. Garantir Permissões
 GRANT SELECT ON public.global_uniao TO anon, authenticated, service_role;
-
--- 4. Comentário de Suporte
-COMMENT ON VIEW public.global_uniao IS 'View consolidada que correlaciona Access, CSV e Full technical payloads via chaves higienizadas.';
