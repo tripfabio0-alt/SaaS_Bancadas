@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, formatSafeDate } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -43,7 +42,7 @@ export default function Home() {
         console.warn('Dashboard: "global_uniao" sem registros ou com erro. Usando fallback direto.');
         const { data: rawRecords } = await supabase
           .from('data')
-          .select('*, status_resultado:"Error conclusion", temperatura_celcius:"temperature", umidade_percentual:"umidade"')
+          .select('*, meter_number:"Meter Number", status_resultado:"Error conclusion", temperatura_celcius:"temperature", umidade_percentual:"umidade", data_hora:"Save time"')
           .order('sync_at', { ascending: false })
           .limit(200);
         records = rawRecords;
@@ -72,16 +71,20 @@ export default function Home() {
       const benchConfigs = config?.benches_config || [];
       
       const benchStatusPromises = benchConfigs.map(async (b: any) => {
-        const { data: latest } = await supabase
-          .from('data')
-          .select('sync_at')
-          .or(`bancada_id.eq.${b.id},bancada_id.eq."${b.id}"`)
-          .order('sync_at', { ascending: false })
-          .limit(1);
-          
-        const lastSync = latest?.[0]?.sync_at;
-        const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
-        return { ...b, isOnline };
+        try {
+          const { data: latest } = await supabase
+            .from('data')
+            .select('sync_at')
+            .or(`bancada_id.eq.${b.id},bancada_id.eq."${b.id}"`)
+            .order('sync_at', { ascending: false })
+            .limit(1);
+            
+          const lastSync = latest?.[0]?.sync_at;
+          const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
+          return { ...b, isOnline };
+        } catch (e) {
+          return { ...b, isOnline: false };
+        }
       });
       
       const resolvedBenches = await Promise.all(benchStatusPromises);
@@ -134,7 +137,7 @@ export default function Home() {
             </span>
           </div>
           <div className="mt-4 h-1 w-full bg-surface-highest rounded-full overflow-hidden">
-            <div className="h-full bg-brand-tertiary w-[88%] transition-all duration-1000" />
+            <div className={`h-full bg-brand-tertiary transition-all duration-1000 w-[${Math.min(100, (summary.approved / Math.max(1, summary.approved + summary.rejected)) * 100)}%]`} />
           </div>
         </div>
 
@@ -151,7 +154,7 @@ export default function Home() {
             </span>
           </div>
           <div className="mt-4 h-1 w-full bg-surface-highest rounded-full overflow-hidden">
-            <div className="h-full bg-brand-error w-[12%] transition-all duration-1000" />
+            <div className={`h-full bg-brand-error transition-all duration-1000 w-[${Math.min(100, (summary.rejected / Math.max(1, summary.approved + summary.rejected)) * 100)}%]`} />
           </div>
         </div>
 
@@ -166,13 +169,13 @@ export default function Home() {
               {benches.map((b, i) => (
                 <div 
                   key={i}
-                  title={b.name}
+                  title={b?.name || `Bancada ${i+1}`}
                   className={cn(
                     "w-8 h-8 rounded-full border-2 border-surface-mid flex items-center justify-center text-[10px] font-bold transition-all",
-                    b.isOnline ? "bg-brand-primary text-brand-primary-foreground" : "bg-surface-highest text-[#dae2fd]/30"
+                    b?.isOnline ? "bg-brand-primary text-brand-primary-foreground" : "bg-surface-highest text-[#dae2fd]/30"
                   )}
                 >
-                  0{b.id}
+                  0{b?.id || i+1}
                 </div>
               ))}
             </div>
@@ -184,7 +187,7 @@ export default function Home() {
             </div>
             <div className="flex-1 bg-background-deep/50 p-3 rounded-xl border border-outline-variant/5">
               <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase mb-1 whitespace-nowrap">Temp. Lab (Última)</p>
-              <p className="text-lg font-bold text-brand-primary">{summary.latestTemp}°C</p>
+              <p className="text-lg font-bold text-brand-primary">{Number(summary.latestTemp).toFixed(1)}°C</p>
             </div>
           </div>
         </div>
@@ -220,8 +223,8 @@ export default function Home() {
             <tbody className="divide-y divide-outline-variant/5">
               {recentRecords.map((row, i) => (
                 <tr key={i} className="hover:bg-surface-highest/5 transition-colors group">
-                  <td className="px-8 py-5 font-mono text-sm text-brand-primary">{row.meter_number}</td>
-                  <td className="px-8 py-5 text-sm font-medium text-[#dae2fd]/80">Bancada {row.bancada_id}</td>
+                  <td className="px-8 py-5 font-mono text-sm text-brand-primary">{row.meter_number || '-'}</td>
+                  <td className="px-8 py-5 text-sm font-medium text-[#dae2fd]/80">Bancada {row.bancada_id || 'N/A'}</td>
                   <td className="px-8 py-5 text-sm text-[#dae2fd]/40">{row.ponto_teste || 'N/A'}</td>
                   <td className="px-8 py-5">
                     <span className={cn(
@@ -234,11 +237,11 @@ export default function Home() {
                         "w-1.5 h-1.5 rounded-full",
                         ['Aprovado', 'APROVADO', 'OK'].includes(row.status_resultado) ? "bg-brand-tertiary" : "bg-brand-error"
                       )} />
-                      {row.status_resultado}
+                      {row.status_resultado || 'Pendente'}
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right text-xs text-[#dae2fd]/40 tabular-nums">
-                    {row.data_hora ? format(new Date(row.data_hora), 'yyyy-MM-dd HH:mm:ss') : '-'}
+                    {formatSafeDate(row.data_hora, 'yyyy-MM-dd HH:mm:ss')}
                   </td>
                 </tr>
               ))}
