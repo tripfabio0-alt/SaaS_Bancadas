@@ -169,30 +169,30 @@ export default function Home() {
                         <td className="px-8 py-5">
                           <span className={cn(
                             "px-2 py-0.5 rounded-lg text-[10px] font-bold border",
-                            row.lote ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/20 border-transparent"
+                            row.lote_produto ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/10" : "bg-white/5 text-white/20 border-transparent"
                           )}>
-                            {row.lote || 'N/A'}
+                            {row.lote_produto || 'N/A'}
                           </span>
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{row['Meter Number']}</span>
-                            <span className="text-[10px] text-white/20">Mark: {row['ID Mark']}</span>
+                            <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{row.meter_number}</span>
+                            <span className="text-[10px] text-white/20">Mark: {row.id_mark_bancada}</span>
                           </div>
                         </td>
                         <td className="px-8 py-5">
                           <span className={cn(
                             "text-[10px] font-black uppercase tracking-widest",
-                            row['Error conclusion'] === 'Aprovado' ? "text-emerald-400" : "text-red-400"
+                            row.status_resultado === 'Aprovado' ? "text-emerald-400" : "text-red-400"
                           )}>
-                            {row['Error conclusion']}
+                            {row.status_resultado}
                           </span>
                         </td>
                         <td className="px-8 py-5">
-                           {row.note ? (
+                           {row.observacao ? (
                              <div className="flex items-center gap-2 text-white/30 truncate max-w-[100px]">
                                <StickyNote size={12} className="text-amber-500/50" />
-                               <span className="text-[10px]">{row.note}</span>
+                               <span className="text-[10px]">{row.observacao}</span>
                              </div>
                            ) : <span className="text-white/5">-</span>}
                         </td>

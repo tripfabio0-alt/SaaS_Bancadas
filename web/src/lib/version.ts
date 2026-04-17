@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.7.8';
+export const APP_VERSION = '1.7.9';
 export const APP_BUILD_DATE = '2026-04-17';
 
 export interface VersionEntry {
@@ -9,6 +9,16 @@ export interface VersionEntry {
 }
 
 export const CHANGELOG: VersionEntry[] = [
+  {
+    version: '1.7.9',
+    date: '2026-04-17',
+    type: 'feat',
+    changes: [
+      { type: 'feat', description: 'Harmonização de Dados: Lógica de chaves canônicas (PT/EN) no sincronizador' },
+      { type: 'feat', description: 'Dashboard: Alinhamento de campos dinâmicos e cobertura total de parâmetros técnicos' },
+      { type: 'fix',  description: 'Infraestrutura: Expansão da tabela de vincúlo de lacres para campos Inmetro' },
+    ],
+  },
   {
     version: '1.7.8',
     date: '2026-04-17',

@@ -26,13 +26,13 @@ SELECT
     vl.lote_produto,
     vl.cod_inmetro,
     vl.lote_inmetro,
-    -- Dados Técnicos Explodidos do JSON (Full Data)
-    (fd.raw_payload->>'Test point') as ponto_teste,
-    (fd.raw_payload->>'Flow rate') as vazao_real,
-    (fd.raw_payload->>'Error') as erro_relativo,
-    (fd.raw_payload->>'Temperature') as temperatura_celcius,
-    (fd.raw_payload->>'Pressure') as pressao_pa,
-    (fd.raw_payload->>'Status') as status_tecnico,
+    -- Dados Técnicos Explodidos do JSON (Full Data) - Canonical Keys
+    (fd.raw_payload->>'test_point') as ponto_teste,
+    (fd.raw_payload->>'flow_rate') as vazao_real,
+    (fd.raw_payload->>'error_relativo') as erro_relativo,
+    (fd.raw_payload->>'temperature') as temperatura_celcius,
+    (fd.raw_payload->>'pressure') as pressao_pa,
+    (fd.raw_payload->>'status_tecnico') as status_tecnico,
     fd.raw_payload as technical_payload_full
 FROM public.data d
 LEFT JOIN public.full_data fd ON d.composite_id = fd.composite_id

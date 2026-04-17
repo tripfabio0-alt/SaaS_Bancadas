@@ -284,21 +284,21 @@ export default function BenchDetail() {
                     {activeTab === 'Data' ? (
                       <>
                         <td className="px-8 py-5">
-                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || '-'}</span>
+                          <span className="font-mono text-blue-400 font-bold">{item['ID Mark'] || item.id_mark_bancada || '-'}</span>
                         </td>
-                        <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || '-'}</td>
+                        <td className="px-8 py-5 text-white/60 font-bold">{item['Meter Number'] || item.meter_number || '-'}</td>
                         <td className="px-8 py-5">
                           <span className={cn(
                               "px-2 py-0.5 rounded-md text-[10px] font-bold",
-                              item['Error conclusion'] === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                              (item['Error conclusion'] || item.status_resultado) === 'Aprovado' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
                           )}>
-                            {item['Error conclusion'] || '-'}
+                            {item['Error conclusion'] || item.status_resultado || '-'}
                           </span>
                         </td>
                         <td className="px-8 py-5 text-white/30 text-[10px]">
-                          {item.note ? <div className="flex items-center gap-2 text-amber-400/60 leading-none"><StickyNote size={12} /> <span className="truncate max-w-[120px]">{item.note}</span></div> : '-'}
+                          {(item.note || item.observacao) ? <div className="flex items-center gap-2 text-amber-400/60 leading-none"><StickyNote size={12} /> <span className="truncate max-w-[120px]">{item.note || item.observacao}</span></div> : '-'}
                         </td>
-                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || '-'}</td>
+                        <td className="px-8 py-5 text-white/20 text-[10px] font-mono">{item['Save time'] || item.data_access || '-'}</td>
                       </>
                     ) : activeTab === 'Full Data' ? (
                       <>

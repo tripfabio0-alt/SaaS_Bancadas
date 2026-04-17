@@ -21,8 +21,9 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def map_columns(df, is_full_data=False):
-    """Mapeia colunas do Access para o padrão do Supabase."""
-    mapping = {
+    """Mapeia colunas do Access para o padrão do Supabase com normalização canônica."""
+    # 1. Mapeamento de Meta-dados (Tabela data)
+    metadata_map = {
         'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
         'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
         'Error conclusion': ['Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
@@ -30,13 +31,21 @@ def map_columns(df, is_full_data=False):
         'Note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
     }
     
+    # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data)
+    tech_map = {
+        'test_point': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
+        'flow_rate': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
+        'error_relativo': ['Error', 'Erro', 'Erro relativo', 'Relative Error'],
+        'temperature': ['Temperature', 'Temperatura', 'Temp', 'T'],
+        'pressure': ['Pressure', 'Pressão', 'Pressao', 'P'],
+        'status_tecnico': ['Status', 'Status técnico', 'Tech Status']
+    }
+
     final_mapping = {}
     cols_map = {col.lower().strip().replace('_', ' ').replace('  ', ' '): col for col in df.columns}
     
-    for target, variations in mapping.items():
-        if is_full_data and target != 'ID Mark':
-            continue
-            
+    # Executar Mapeamento de Metadados
+    for target, variations in metadata_map.items():
         found = False
         target_norm = target.lower()
         if target_norm in cols_map:
@@ -51,25 +60,30 @@ def map_columns(df, is_full_data=False):
                     found = True
                     break
     
+    # Se for Full Data, mapear também os campos técnicos para chaves canônicas no JSON
+    if is_full_data:
+        for target, variations in tech_map.items():
+            for variant in variations:
+                v_norm = variant.lower().strip().replace('_', ' ')
+                if v_norm in cols_map:
+                    final_mapping[cols_map[v_norm]] = target
+                    break
+
     if final_mapping:
         df = df.rename(columns=final_mapping)
     
     if is_full_data:
-        required = ['ID Mark']
+        # No Full Data, geramos um payload com chaves canônicas + campos originais não mapeados
+        df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
+        return df[['ID Mark', 'raw_payload']].copy()
     else:
-        # Note é opcional
+        # No Data (Main), garantimos apenas os campos de meta-dados necessários
         required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'Note']
         for col in required:
             if col not in df.columns:
                 df[col] = None
-
-    if is_full_data:
-        other_cols = [c for c in df.columns if c != 'ID Mark']
-        df['raw_payload'] = df[other_cols].apply(lambda x: x.to_dict(), axis=1)
-        return df[['ID Mark', 'raw_payload']].copy()
-    else:
-        cols_to_keep = [c for c in required if c in df.columns]
-        return df[cols_to_keep].copy()
+        
+        return df[required].copy()
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "sync_state.json")
 
