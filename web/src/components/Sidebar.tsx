@@ -15,7 +15,7 @@ import {
   Cpu
 } from 'lucide-react';
 
-const APP_VERSION = "2.0.2"; 
+const APP_VERSION = "2.0.3"; 
 
 interface BenchConfig {
   id: number;
@@ -52,7 +52,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     fetchBenches();
-    const interval = setInterval(fetchBenches, 60000); // Atualiza status a cada minuto
+    const interval = setInterval(fetchBenches, 60000); 
     return () => { clearInterval(interval); };
   }, []);
 
@@ -64,7 +64,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-mid flex flex-col pt-8 pb-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] z-50 transition-colors">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-mid flex flex-col pt-8 pb-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] z-50 transition-all border-r border-outline-variant/10">
       <div className="px-6 mb-8">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
@@ -84,7 +84,7 @@ export default function Sidebar() {
           return (
             <Link key={item.href} href={item.href} className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold font-body",
-              isActive ? "bg-brand-primary/10 text-brand-primary" : "text-white/40 hover:bg-white/5 hover:text-white"
+              isActive ? "bg-brand-primary/10 text-brand-primary" : "text-text-sub hover:bg-surface-highest/5 hover:text-text-main"
             )}>
               <Icon size={18} className={isActive ? "text-brand-primary" : "opacity-40"} />
               <span>{item.label}</span>
@@ -92,8 +92,8 @@ export default function Sidebar() {
           );
         })}
 
-        <div className="pt-6 pb-2 px-4">
-          <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-3">Status de Nós</p>
+        <div className="pt-6 pb-2 px-4 shadow-sm">
+          <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-3">Status de Operação</p>
           <div className="space-y-1">
             {benches.map((bench) => {
               const benchHref = `/bancada/${bench.id}`;
@@ -101,7 +101,7 @@ export default function Sidebar() {
               return (
                 <Link key={bench.id} href={benchHref} className={cn(
                   "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-xs font-bold",
-                  isActive ? "bg-white/5 text-white" : "text-white/30 hover:text-white"
+                  isActive ? "bg-surface-highest/20 text-text-main" : "text-text-sub hover:text-text-main hover:bg-surface-highest/10"
                 )}>
                    <div className={cn(
                      "w-2 h-2 rounded-full",
@@ -116,9 +116,9 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto px-4 pt-4 border-t border-outline-variant/10">
-        <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-widest text-white/20">
+        <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-widest text-text-dim">
           <span>Versão SaaS</span>
-          <span className="bg-surface-highest px-2 py-0.5 rounded text-white/40">v{APP_VERSION}</span>
+          <span className="bg-surface-highest px-2 py-0.5 rounded">v{APP_VERSION}</span>
         </div>
       </div>
     </aside>
