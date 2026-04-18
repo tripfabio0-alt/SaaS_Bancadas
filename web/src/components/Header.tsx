@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Globe, Moon, Sun, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Header() {
   const [isDark, setIsDark] = useState(true);
+
+  // Efeito para sincronizar o tema com a classe da tag HTML
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+  }, [isDark]);
 
   return (
     <header className="fixed top-0 w-full z-40 bg-surface-low/80 backdrop-blur-md flex justify-between items-center px-6 py-4 pl-72 border-b border-outline-variant/10">
@@ -36,7 +48,8 @@ export default function Header() {
            </button>
            <button 
              onClick={() => setIsDark(!isDark)}
-             className="p-2 text-[#dae2fd] opacity-70 hover:bg-surface-highest hover:opacity-100 transition-all rounded-lg"
+             title={isDark ? "Ativar Modo Dia" : "Ativar Modo Noite"}
+             className="p-2 text-[#dae2fd] opacity-70 hover:bg-surface-highest hover:opacity-100 transition-all rounded-lg border border-transparent active:scale-95"
            >
              {isDark ? <Sun size={18} /> : <Moon size={18} />}
            </button>

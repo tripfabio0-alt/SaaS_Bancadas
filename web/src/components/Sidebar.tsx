@@ -12,41 +12,48 @@ import {
   Settings2, 
   HelpCircle, 
   LogOut,
-  Cpu,
-  Activity
+  Cpu
 } from 'lucide-react';
 
-const APP_VERSION = "2.0.1"; // Versão estabilizada PT-BR
+const APP_VERSION = "2.0.2"; 
 
 interface BenchConfig {
   id: number;
   name: string;
+  isOnline?: boolean;
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [benches, setBenches] = useState<BenchConfig[]>([]);
 
-  useEffect(() => {
-    async function fetchBenches() {
-      const { data } = await supabase
-        .from('app_config')
-        .select('benches_config')
-        .eq('id', 1)
-        .single();
+  const fetchBenches = async () => {
+    const { data } = await supabase.from('app_config').select('benches_config').eq('id', 1).single();
+    
+    if (data?.benches_config) {
+      const benchConfigs = data.benches_config;
       
-      if (data?.benches_config) {
-        setBenches(data.benches_config);
-      }
+      const benchStatusPromises = benchConfigs.map(async (b: any) => {
+        const { data: latest } = await supabase
+          .from('data')
+          .select('sync_at')
+          .or(`bancada_id.eq.${b.id},bancada_id.eq."${b.id}"`)
+          .order('sync_at', { ascending: false })
+          .limit(1);
+        const lastSync = latest?.[0]?.sync_at;
+        const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
+        return { ...b, isOnline };
+      });
+      
+      const resolvedBenches = await Promise.all(benchStatusPromises);
+      setBenches(resolvedBenches);
     }
+  };
+
+  useEffect(() => {
     fetchBenches();
-
-    const channel = supabase
-      .channel('sidebar-sync')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config' }, fetchBenches)
-      .subscribe();
-
-    return () => { channel.unsubscribe(); };
+    const interval = setInterval(fetchBenches, 60000); // Atualiza status a cada minuto
+    return () => { clearInterval(interval); };
   }, []);
 
   const navItems = [
@@ -57,71 +64,48 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-mid flex flex-col pt-8 pb-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] z-50">
-      {/* Station Branding */}
-      <div className="px-6 mb-8 text-nowrap overflow-hidden">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface-mid flex flex-col pt-8 pb-8 gap-2 shadow-[1px_0_0_0_rgba(69,70,77,0.15)] z-50 transition-colors">
+      <div className="px-6 mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
              <Cpu className="text-brand-primary" size={20} />
           </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight truncate">Controle de Bancada</h2>
-            <p className="text-[10px] uppercase tracking-widest text-[#dae2fd] opacity-60">Estação ID: 08-A</p>
+          <div>
+            <h2 className="text-lg font-bold text-brand-primary font-headline leading-tight">SaaS Bancadas</h2>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-brand-tertiary">Industrial Sync</p>
           </div>
         </div>
       </div>
 
-      {/* Primary Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
-            <Link
-              key={item.label + item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium font-body",
-                isActive 
-                  ? "bg-surface-highest/40 text-brand-primary border-l-4 border-brand-secondary" 
-                  : "text-[#dae2fd] opacity-70 hover:bg-surface-high hover:opacity-100"
-              )}
-            >
-              <Icon 
-                size={18}
-                className={cn(
-                  "transition-transform group-hover:scale-110 flex-shrink-0",
-                  isActive ? "text-brand-primary" : "text-[#dae2fd]/60"
-                )} 
-              />
-              <span className="truncate">{item.label}</span>
+            <Link key={item.href} href={item.href} className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold font-body",
+              isActive ? "bg-brand-primary/10 text-brand-primary" : "text-white/40 hover:bg-white/5 hover:text-white"
+            )}>
+              <Icon size={18} className={isActive ? "text-brand-primary" : "opacity-40"} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
 
-        {/* Live Benches */}
         <div className="pt-6 pb-2 px-4">
-          <p className="text-[10px] font-bold text-[#dae2fd] opacity-30 uppercase tracking-[0.2em] mb-3">Bancadas Online</p>
+          <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-3">Status de Nós</p>
           <div className="space-y-1">
-            {benches.length === 0 ? (
-               <div className="px-3 py-2 text-[10px] text-white/20 italic">Inicializando bancadas...</div>
-            ) : benches.map((bench) => {
+            {benches.map((bench) => {
               const benchHref = `/bancada/${bench.id}`;
               const isActive = pathname === benchHref;
               return (
-                <Link
-                  key={bench.id}
-                  href={benchHref}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2 rounded-lg transition-all text-xs font-medium",
-                    isActive 
-                      ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20" 
-                      : "text-[#dae2fd]/60 hover:text-white hover:bg-surface-high"
-                  )}
-                >
+                <Link key={bench.id} href={benchHref} className={cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-xs font-bold",
+                  isActive ? "bg-white/5 text-white" : "text-white/30 hover:text-white"
+                )}>
                    <div className={cn(
-                     "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                     isActive ? "bg-brand-primary shadow-[0_0_8px_rgba(173,198,255,0.6)]" : "bg-white/20"
+                     "w-2 h-2 rounded-full",
+                     bench.isOnline ? "bg-brand-tertiary shadow-[0_0_8px_#4ade80]" : "bg-brand-error shadow-[0_0_8px_#f87171]"
                    )} />
                   <span className="truncate">{bench.name}</span>
                 </Link>
@@ -131,26 +115,10 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="mt-auto space-y-1 px-4">
-        <Link 
-          href="/help" 
-          className="flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:opacity-100 rounded-xl transition-all text-sm font-medium"
-        >
-          <HelpCircle size={18} className="flex-shrink-0" />
-          <span>Suporte Técnico</span>
-        </Link>
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-[#dae2fd] opacity-60 hover:bg-surface-high hover:text-brand-error transition-all text-sm font-medium rounded-xl">
-          <LogOut size={18} className="flex-shrink-0" />
-          <span>Sair do Sistema</span>
-        </button>
-
-        {/* Version Badge */}
-        <div className="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
-          <span className="text-[10px] text-white/20 uppercase tracking-widest">Versão</span>
-          <span className="text-[10px] font-mono font-bold text-white/30 bg-surface-highest/50 px-2 py-0.5 rounded border border-outline-variant/10">
-            v{APP_VERSION}
-          </span>
+      <div className="mt-auto px-4 pt-4 border-t border-outline-variant/10">
+        <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-widest text-white/20">
+          <span>Versão SaaS</span>
+          <span className="bg-surface-highest px-2 py-0.5 rounded text-white/40">v{APP_VERSION}</span>
         </div>
       </div>
     </aside>

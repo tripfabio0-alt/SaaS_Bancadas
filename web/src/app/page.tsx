@@ -3,262 +3,253 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cn, formatSafeDate } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { 
   CheckCircle2, 
   XCircle, 
   Activity, 
-  Thermometer, 
   ArrowUpRight, 
   ArrowDownRight,
-  Maximize2,
-  Download,
-  Search
+  Search,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Download
 } from 'lucide-react';
 
+const PAGE_SIZE = 50;
+
 export default function Home() {
-  const [recentRecords, setRecentRecords] = useState<any[]>([]);
+  const [reportData, setReportData] = useState<any[]>([]);
   const [benches, setBenches] = useState<any[]>([]);
+  const [visibleFields, setVisibleFields] = useState<string[]>([]);
   const [summary, setSummary] = useState({
     approved: 0,
     rejected: 0,
     onlineCount: 0,
-    latestTemp: 0,
-    latestHum: 0,
-    trendApproved: '+12%',
-    trendRejected: '-2%'
+    totalBenches: 0
   });
+  
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchData = async () => {
+  const FIELD_LABELS: Record<string, string> = {
+    'meter_number': 'Série Medidor',
+    'status_resultado': 'Resultado',
+    'data_hora': 'Data/Hora',
+    'lote_produto': 'Lote (CSV)',
+    'lacre': 'Lacre',
+    'observacao': 'Obs',
+    'ponto_teste': 'Ponto Q',
+    'vazao_real': 'Vazão',
+    'erro_relativo': 'Erro (%)',
+    'temperatura_celcius': 'Temp Lab',
+    'umidade_percentual': 'Umidade',
+    'wme_value': 'WME'
+  };
+
+  const fetchConfig = async () => {
     try {
-      setLoading(true);
-      
-      // 1. Buscar Dados de Resumo (Contagens)
-      let { data: records, error: viewError } = await supabase.from('global_uniao').select('*').limit(200);
-      
-      // Fallback se a view falhar ou estiver vazia
-      if (viewError || !records || records.length === 0) {
-        console.warn('Dashboard: "global_uniao" sem registros ou com erro. Usando fallback direto.');
-        const { data: rawRecords } = await supabase
-          .from('data')
-          .select('*, meter_number:"Meter Number", status_resultado:"Error conclusion", temperatura_celcius:"temperature", umidade_percentual:"umidade", data_hora:"Save time"')
-          .order('sync_at', { ascending: false })
-          .limit(200);
-        records = rawRecords;
-      }
-      
-      if (records && records.length > 0) {
-        const approvedSet = new Set(['Aprovado', 'APROVADO', 'OK', 'Pass']);
-        const approved = records.filter(r => approvedSet.has(r.status_resultado)).length;
-        const rejected = records.length - approved;
-
-        // Última leitura de clima
-        const latestWithClimate = records.find(r => r.temperatura_celcius || r.temperature);
-        
-        setSummary(prev => ({
-          ...prev,
-          approved,
-          rejected,
-          latestTemp: latestWithClimate?.temperatura_celcius || latestWithClimate?.temperature || 0,
-          latestHum: latestWithClimate?.umidade_percentual || latestWithClimate?.umidade || 0
-        }));
-        setRecentRecords(records.slice(0, 6));
-      }
-
-      // 3. Status das Bancadas
       const { data: config } = await supabase.from('app_config').select('*').eq('id', 1).single();
-      const benchConfigs = config?.benches_config || [];
-      
-      const benchStatusPromises = benchConfigs.map(async (b: any) => {
-        try {
+      if (config) {
+        setVisibleFields(config.admin_settings?.visible_fields || ['meter_number', 'lote_produto', 'status_resultado', 'data_hora']);
+        const benchConfigs = config.benches_config || [];
+        
+        const benchStatusPromises = benchConfigs.map(async (b: any) => {
           const { data: latest } = await supabase
             .from('data')
             .select('sync_at')
             .or(`bancada_id.eq.${b.id},bancada_id.eq."${b.id}"`)
             .order('sync_at', { ascending: false })
             .limit(1);
-            
           const lastSync = latest?.[0]?.sync_at;
           const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
           return { ...b, isOnline };
-        } catch (e) {
-          return { ...b, isOnline: false };
-        }
-      });
+        });
+        
+        const resolvedBenches = await Promise.all(benchStatusPromises);
+        setBenches(resolvedBenches);
+        setSummary(prev => ({ 
+          ...prev, 
+          onlineCount: resolvedBenches.filter(b => b.isOnline).length,
+          totalBenches: resolvedBenches.length
+        }));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchData = async (currentPage = page) => {
+    setLoading(true);
+    try {
+      await fetchConfig();
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase.from('global_uniao').select('*', { count: 'exact' });
       
-      const resolvedBenches = await Promise.all(benchStatusPromises);
-      setBenches(resolvedBenches);
-      setSummary(prev => ({ ...prev, onlineCount: resolvedBenches.filter(b => b.isOnline).length }));
+      if (searchTerm) {
+        query = query.or(`meter_number.ilike.%${searchTerm}%,lote_produto.ilike.%${searchTerm}%,lacre.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, count, error } = await query
+        .order('data_hora', { ascending: false })
+        .range(from, to);
+      
+      if (error || !data) {
+        // Fallback robusto se a view estiver falhando
+        const { data: fallbackData } = await supabase
+          .from('data')
+          .select('*, meter_number:"Meter Number", status_resultado:"Error conclusion", data_hora:"Save time"')
+          .order('sync_at', { ascending: false })
+          .range(from, to);
+        setReportData(fallbackData || []);
+      } else {
+        setReportData(data);
+      }
+      
+      // Contagem de aprovados no lote carregado
+      const approved = (data || []).filter(r => ['Aprovado', 'OK'].includes(r.status_resultado)).length;
+      setSummary(prev => ({ ...prev, approved, rejected: (data?.length || 0) - approved }));
 
     } catch (err) {
-      console.error('Erro no Busca Dashboard:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const sub = supabase.channel('home-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'data' }, fetchData).subscribe();
-    return () => { sub.unsubscribe(); };
-  }, []);
+    fetchData(0);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchData(page);
+  }, [page]);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
-      {/* Dashboard Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-outline-variant/10 pb-6">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-brand-primary font-headline uppercase">Painel de Controle</h1>
-          <p className="text-[#dae2fd] opacity-40 mt-1">Métricas de verificação industrial em tempo real.</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="machined-gradient text-white font-bold px-6 py-2.5 rounded-xl text-xs tracking-wider flex items-center gap-2 hover:opacity-90 transition-all shadow-lg active:scale-95">
-            <Activity size={14} /> NOVA CALIBRAÇÃO
-          </button>
-          <button className="bg-surface-highest/40 border border-outline-variant/20 text-[#dae2fd] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-surface-highest transition-all">
-            EXPORTAR CSV
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Stats Grid */}
+    <div className="p-8 space-y-8 animate-in fade-in duration-700">
+      {/* KPI Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Total Approved */}
-        <div className="bg-surface-mid p-6 rounded-2xl border border-brand-tertiary/10 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-             <CheckCircle2 size={64} className="text-brand-tertiary" />
-          </div>
-          <p className="text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em] mb-4">Total Aprovados</p>
-          <div className="flex items-end gap-2">
-            <h2 className="text-5xl font-extrabold text-brand-tertiary font-headline">{summary.approved.toLocaleString()}</h2>
-            <span className="text-brand-tertiary text-xs font-bold pb-1 flex items-center">
-              <ArrowUpRight size={12} /> {summary.trendApproved}
-            </span>
-          </div>
-          <div className="mt-4 h-1 w-full bg-surface-highest rounded-full overflow-hidden">
-            <div className={`h-full bg-brand-tertiary transition-all duration-1000 w-[${Math.min(100, (summary.approved / Math.max(1, summary.approved + summary.rejected)) * 100)}%]`} />
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10">
+          <p className="text-[10px] font-bold text-brand-primary uppercase tracking-widest mb-4">Aprovados (Lote Atual)</p>
+          <div className="flex items-end justify-between">
+            <h2 className="text-4xl font-extrabold text-brand-tertiary">{summary.approved}</h2>
+            <ArrowUpRight className="text-brand-tertiary opacity-40" />
           </div>
         </div>
-
-        {/* Total Rejected */}
-        <div className="bg-surface-mid p-6 rounded-2xl border border-brand-error/10 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-             <XCircle size={64} className="text-brand-error" />
-          </div>
-          <p className="text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em] mb-4">Total Reprovados</p>
-          <div className="flex items-end gap-2">
-            <h2 className="text-5xl font-extrabold text-brand-error font-headline">{summary.rejected.toLocaleString()}</h2>
-            <span className="text-brand-error text-xs font-bold pb-1 flex items-center">
-              <ArrowDownRight size={12} /> {summary.trendRejected}
-            </span>
-          </div>
-          <div className="mt-4 h-1 w-full bg-surface-highest rounded-full overflow-hidden">
-            <div className={`h-full bg-brand-error transition-all duration-1000 w-[${Math.min(100, (summary.rejected / Math.max(1, summary.approved + summary.rejected)) * 100)}%]`} />
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10">
+          <p className="text-[10px] font-bold text-brand-error uppercase tracking-widest mb-4">Reprovados (Lote Atual)</p>
+          <div className="flex items-end justify-between">
+            <h2 className="text-4xl font-extrabold text-brand-error">{summary.rejected}</h2>
+            <ArrowDownRight className="text-brand-error opacity-40" />
           </div>
         </div>
-
-        {/* Bench Status */}
-        <div className="bg-surface-mid p-6 rounded-2xl col-span-1 md:col-span-2 flex flex-col justify-between border border-outline-variant/10">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-bold text-[#dae2fd] opacity-40 uppercase tracking-[0.2em] mb-1">Status das Bancadas</p>
-              <h3 className="text-xl font-bold text-white">{summary.onlineCount}/5 Nós Ativos</h3>
-            </div>
-            <div className="flex -space-x-2">
-              {benches.map((b, i) => (
-                <div 
-                  key={i}
-                  title={b?.name || `Bancada ${i+1}`}
-                  className={cn(
-                    "w-8 h-8 rounded-full border-2 border-surface-mid flex items-center justify-center text-[10px] font-bold transition-all",
-                    b?.isOnline ? "bg-brand-primary text-brand-primary-foreground" : "bg-surface-highest text-[#dae2fd]/30"
-                  )}
-                >
-                  0{b?.id || i+1}
-                </div>
-              ))}
-            </div>
+        <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 col-span-2 flex justify-between items-center">
+          <div>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Monitoramento de Nós</p>
+            <h3 className="text-xl font-bold text-white uppercase">{summary.onlineCount} de {summary.totalBenches} Bancadas Operantes</h3>
           </div>
-          <div className="flex gap-4 mt-6">
-            <div className="flex-1 bg-background-deep/50 p-3 rounded-xl border border-outline-variant/5">
-              <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase mb-1 whitespace-nowrap">Precisão da Sala</p>
-              <p className="text-lg font-bold text-brand-primary">±0.042%</p>
-            </div>
-            <div className="flex-1 bg-background-deep/50 p-3 rounded-xl border border-outline-variant/5">
-              <p className="text-[10px] text-[#dae2fd] opacity-30 uppercase mb-1 whitespace-nowrap">Temp. Lab (Última)</p>
-              <p className="text-lg font-bold text-brand-primary">{Number(summary.latestTemp).toFixed(1)}°C</p>
-            </div>
+          <div className="flex -space-x-2">
+            {benches.map((b, i) => (
+              <div key={i} title={b.name} className={cn(
+                "w-10 h-10 rounded-full border-2 border-surface-mid flex items-center justify-center text-[10px] font-bold",
+                b.isOnline ? "bg-brand-tertiary text-black" : "bg-surface-highest text-white/20"
+              )}>0{b.id}</div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Table Section */}
-      <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl">
-        <div className="p-6 flex justify-between items-center bg-surface-highest/20 border-b border-outline-variant/10">
-          <h2 className="text-lg font-bold text-brand-primary flex items-center gap-2">
-            <Activity className="text-brand-primary" size={18} /> Fluxo de Medições
-          </h2>
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#dae2fd]/40 group-focus-within:text-brand-primary transition-colors" size={14} />
-            <input 
-              className="bg-background-deep/50 border-outline-variant/10 rounded-xl pl-10 pr-4 py-2 text-sm text-[#dae2fd] focus:ring-1 focus:ring-brand-primary w-64 transition-all placeholder:text-[#dae2fd]/20" 
-              placeholder="Buscar Serial..." 
-              type="text"
-            />
+      {/* Main Table Interface (Tabelão) */}
+      <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl flex flex-col">
+        <div className="p-6 bg-surface-highest/20 border-b border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
+              <Activity size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white font-headline">Tabelão de Registros Industriais</h2>
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Unificação: Access + JSON + CSV</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary opacity-40" size={16} />
+              <input 
+                type="text" placeholder="Pesquisar Medidor, Lote ou Lacre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-background-deep/50 border border-outline-variant/10 rounded-xl py-3 pl-12 pr-4 text-xs text-white focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+            <button onClick={() => fetchData(page)} className="bg-surface-highest/50 p-3 rounded-xl hover:bg-surface-highest text-brand-primary transition-all">
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-highest/10">
-                <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-[#dae2fd]/40">Série Medidor</th>
-                <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-[#dae2fd]/40">Bancada</th>
-                <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-[#dae2fd]/40">Ponto</th>
-                <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-[#dae2fd]/40">Resultado</th>
-                <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-[#dae2fd]/40 text-right">Data/Hora</th>
+                {visibleFields.map(f => (
+                  <th key={f} className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-brand-primary/40 whitespace-nowrap">
+                    {FIELD_LABELS[f] || f}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
-              {recentRecords.map((row, i) => (
-                <tr key={i} className="hover:bg-surface-highest/5 transition-colors group">
-                  <td className="px-8 py-5 font-mono text-sm text-brand-primary">{row.meter_number || '-'}</td>
-                  <td className="px-8 py-5 text-sm font-medium text-[#dae2fd]/80">Bancada {row.bancada_id || 'N/A'}</td>
-                  <td className="px-8 py-5 text-sm text-[#dae2fd]/40">{row.ponto_teste || 'N/A'}</td>
-                  <td className="px-8 py-5">
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
-                      ['Aprovado', 'APROVADO', 'OK'].includes(row.status_resultado) 
-                        ? "bg-brand-tertiary/10 text-brand-tertiary shadow-[0_0_8px_rgba(137,206,255,0.1)]" 
-                        : "bg-brand-error/10 text-brand-error shadow-[0_0_8px_rgba(255,180,171,0.1)]"
-                    )}>
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        ['Aprovado', 'APROVADO', 'OK'].includes(row.status_resultado) ? "bg-brand-tertiary" : "bg-brand-error"
-                      )} />
-                      {row.status_resultado || 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-right text-xs text-[#dae2fd]/40 tabular-nums">
-                    {formatSafeDate(row.data_hora, 'yyyy-MM-dd HH:mm:ss')}
-                  </td>
+              {loading ? (
+                <tr><td colSpan={20} className="py-24 text-center opacity-20 italic">Sincronizando fluxo de registros...</td></tr>
+              ) : reportData.length === 0 ? (
+                <tr><td colSpan={20} className="py-24 text-center opacity-20 italic">Nenhum dado encontrado para os filtros atuais.</td></tr>
+              ) : reportData.map((row, i) => (
+                <tr key={i} className="hover:bg-surface-highest/5 transition-colors">
+                  {visibleFields.map(field => {
+                    const value = row[field];
+                    if (field === 'status_resultado') {
+                      const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
+                      return (
+                        <td key={field} className="px-8 py-5">
+                          <span className={cn(
+                            "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight shadow-sm",
+                            isOk ? "bg-brand-tertiary/10 text-brand-tertiary" : "bg-brand-error/10 text-brand-error"
+                          )}>
+                             <div className={cn("w-1.5 h-1.5 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
+                             {value || 'Pendente'}
+                          </span>
+                        </td>
+                      );
+                    }
+                    if (field === 'data_hora') return <td key={field} className="px-8 py-5 text-xs text-white/40 tabular-nums italic">{formatSafeDate(value, 'yyyy-MM-dd HH:mm:ss')}</td>;
+                    if (field === 'meter_number') return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value || '-'}</td>;
+                    return <td key={field} className="px-8 py-5 text-xs text-white/60">{value === null || value === undefined ? '-' : String(value)}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        
-        <div className="p-4 bg-surface-highest/10 flex justify-between items-center text-[10px] text-[#dae2fd]/30 uppercase tracking-widest font-bold">
-          <span>Telemetria em tempo real</span>
-          <div className="flex gap-4">
-            <button className="hover:text-brand-primary transition-colors">Anterior</button>
-            <button className="hover:text-brand-primary transition-colors">Próximo</button>
-          </div>
+
+        {/* Footer Paginação */}
+        <div className="p-6 bg-surface-highest/20 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-white/40 uppercase tracking-widest">
+           <div className="flex gap-4">
+              <span>Nó de Origem: Supabase Cloud</span>
+              <span className="text-brand-tertiary">Streaming Ativo</span>
+           </div>
+           <div className="flex gap-6 items-center">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="hover:text-brand-primary transition-all disabled:opacity-5 flex items-center gap-1">
+                <ChevronLeft size={14} /> Anterior
+              </button>
+              <span className="text-white font-black">Página {page + 1}</span>
+              <button disabled={reportData.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="hover:text-brand-primary transition-all disabled:opacity-5 flex items-center gap-1">
+                Próximo <ChevronRight size={14} />
+              </button>
+           </div>
         </div>
       </section>
 
-      {/* Blueprint Grid Accent */}
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03] blueprint-grid" />
     </div>
   );

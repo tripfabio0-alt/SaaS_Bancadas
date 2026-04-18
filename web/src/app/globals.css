@@ -2,27 +2,51 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --color-brand-primary: #adc6ff;
+    --color-brand-secondary: #357df1;
+    --color-brand-tertiary: #4ade80; /* VERDE INDUSTRIAL */
+    --color-brand-error: #f87171;    /* VERMELHO INDUSTRIAL */
+    --color-background-deep: #0b1326;
+    --color-surface-low: #0b1326;
+    --color-surface-mid: #131b2e;
+    --color-surface-high: #171f33;
+    --color-surface-highest: #2d3449;
+    --color-outline-variant: #45464d;
+    --foreground: #dae2fd;
+    --background: #0b1326;
+  }
+
+  .light {
+    --color-brand-primary: #357df1;
+    --color-brand-secondary: #1a4fa0;
+    --color-brand-tertiary: #22c55e; /* VERDE CLARO */
+    --color-brand-error: #ef4444;    /* VERMELHO CLARO */
+    --color-background-deep: #f8fafc;
+    --color-surface-low: #ffffff;
+    --color-surface-mid: #f1f5f9;
+    --color-surface-high: #e2e8f0;
+    --color-surface-highest: #cbd5e1;
+    --color-outline-variant: #94a3b8;
+    --foreground: #0f172a;
+    --background: #f8fafc;
+  }
 }
 
 @theme {
-  --color-brand-primary: #adc6ff;
-  --color-brand-secondary: #357df1;
-  --color-brand-tertiary: #89ceff;
-  --color-brand-error: #ffb4ab;
-  --color-background-deep: #0b1326;
-  --color-surface-low: #0b1326;
-  --color-surface-mid: #131b2e;
-  --color-surface-high: #171f33;
-  --color-surface-highest: #2d3449;
-  --color-outline-variant: #45464d;
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-secondary: var(--color-brand-secondary);
+  --color-brand-tertiary: var(--color-brand-tertiary);
+  --color-brand-error: var(--color-brand-error);
+  --color-background-deep: var(--color-background-deep);
+  --color-surface-low: var(--color-surface-low);
+  --color-surface-mid: var(--color-surface-mid);
+  --color-surface-high: var(--color-surface-high);
+  --color-surface-highest: var(--color-surface-highest);
+  --color-outline-variant: var(--color-outline-variant);
   
   --font-headline: 'Manrope', sans-serif;
   --font-body: 'Inter', sans-serif;
-}
-
-:root {
-  --background: #0b1326;
-  --foreground: #dae2fd;
 }
 
 body {
@@ -30,43 +54,44 @@ body {
   background: var(--background);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Glassmorphism from Stitch Model */
+/* Custom Glassmorphism */
 .glass-panel {
-  background: rgba(45, 52, 73, 0.6);
+  background: rgba(45, 52, 73, 0.4);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(69, 70, 77, 0.15);
 }
 
 .machined-gradient {
-  background: linear-gradient(135deg, #adc6ff 0%, #357df1 100%);
+  background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-secondary) 100%);
 }
 
 .status-glow-ok {
-  box-shadow: 0 0 12px rgba(137, 206, 255, 0.3);
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
 }
 
 .status-glow-nk {
-  box-shadow: 0 0 12px rgba(255, 180, 171, 0.3);
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.3);
 }
 
 .blueprint-grid {
-  background-image: linear-gradient(#adc6ff 1px, transparent 1px), linear-gradient(90deg, #adc6ff 1px, transparent 1px);
+  background-image: linear-gradient(var(--color-brand-primary) 1px, transparent 1px), linear-gradient(90deg, var(--color-brand-primary) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* Custom Scrollbar for Industrial Feel */
+/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(173, 198, 255, 0.1);
+  background: rgba(173, 198, 255, 0.2);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(173, 198, 255, 0.2);
+  background: rgba(173, 198, 255, 0.3);
 }
