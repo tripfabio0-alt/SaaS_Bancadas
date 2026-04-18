@@ -15,7 +15,7 @@ import {
   Cpu
 } from 'lucide-react';
 
-const APP_VERSION = "2.0.3"; 
+const APP_VERSION = "2.0.4"; 
 
 interface BenchConfig {
   id: number;
@@ -41,7 +41,8 @@ export default function Sidebar() {
           .order('sync_at', { ascending: false })
           .limit(1);
         const lastSync = latest?.[0]?.sync_at;
-        const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000) : false;
+        // TOLERÂNCIA INDUSTRIAL DE 3 HORAS (180 minutos)
+        const isOnline = lastSync ? (Date.now() - new Date(lastSync).getTime() < 180 * 60 * 1000) : false;
         return { ...b, isOnline };
       });
       
@@ -84,7 +85,7 @@ export default function Sidebar() {
           return (
             <Link key={item.href} href={item.href} className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold font-body",
-              isActive ? "bg-brand-primary/10 text-brand-primary" : "text-text-sub hover:bg-surface-highest/5 hover:text-text-main"
+              isActive ? "bg-brand-primary/10 text-brand-primary shadow-sm" : "text-text-sub hover:bg-surface-highest/5 hover:text-text-main"
             )}>
               <Icon size={18} className={isActive ? "text-brand-primary" : "opacity-40"} />
               <span>{item.label}</span>
@@ -93,7 +94,7 @@ export default function Sidebar() {
         })}
 
         <div className="pt-6 pb-2 px-4 shadow-sm">
-          <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-3">Status de Operação</p>
+          <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-3">Nós em Operação</p>
           <div className="space-y-1">
             {benches.map((bench) => {
               const benchHref = `/bancada/${bench.id}`;
@@ -104,8 +105,8 @@ export default function Sidebar() {
                   isActive ? "bg-surface-highest/20 text-text-main" : "text-text-sub hover:text-text-main hover:bg-surface-highest/10"
                 )}>
                    <div className={cn(
-                     "w-2 h-2 rounded-full",
-                     bench.isOnline ? "bg-brand-tertiary shadow-[0_0_8px_#4ade80]" : "bg-brand-error shadow-[0_0_8px_#f87171]"
+                     "w-2.5 h-2.5 rounded-full transition-shadow duration-500",
+                     bench.isOnline ? "bg-brand-tertiary shadow-[0_0_10px_#4ade80]" : "bg-brand-error shadow-[0_0_10px_#f87171]"
                    )} />
                   <span className="truncate">{bench.name}</span>
                 </Link>
@@ -117,7 +118,7 @@ export default function Sidebar() {
 
       <div className="mt-auto px-4 pt-4 border-t border-outline-variant/10">
         <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-widest text-text-dim">
-          <span>Versão SaaS</span>
+          <span>Infraestrutura SaaS</span>
           <span className="bg-surface-highest px-2 py-0.5 rounded">v{APP_VERSION}</span>
         </div>
       </div>
