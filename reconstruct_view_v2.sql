@@ -1,9 +1,9 @@
 -- ==========================================================
--- SCRIPT DE RECONSTRUÇÃO V7.0: PONTE DE DADOS DEFINITIVA
+-- SCRIPT DE RECONSTRUÇÃO V8.0: CORREÇÃO DE DUPLICIDADE
 -- ==========================================================
--- Este script realiza o aliasing (apelido) das colunas originais 
--- do Access para os nomes esperados pelo Dashboard do SaaS.
--- Isso resolve o erro de carregamento que impedia a exibição dos dados.
+-- Este script corrige o erro de "coluna especificada mais de uma vez"
+-- removendo as declarações explícitas de bancada_id e composite_id
+-- que já estão incluídas no comando d.*.
 
 -- 1. Permissões Globais
 GRANT SELECT ON public.data TO anon, authenticated, service_role;
@@ -11,19 +11,17 @@ GRANT SELECT ON public.full_data TO anon, authenticated, service_role;
 GRANT SELECT ON public.vinculo_lacre TO anon, authenticated, service_role;
 GRANT SELECT ON public.app_config TO anon, authenticated, service_role;
 
--- 2. Recriação da View de Correlação (STABLE BRIDGE)
+-- 2. Recriação da View de Correlação (CLEAN BRIDGE)
 DROP VIEW IF EXISTS public.global_uniao;
 
 CREATE VIEW public.global_uniao AS
 SELECT 
-    -- 1. Mapeamento de ALIASES (Tradução Access -> SaaS)
+    -- 1. Mapeamento de ALIASES (Apenas o que precisa ser renomeado)
     d."Save time" as data_hora,
     d."Meter Number" as meter_number,
     d."ID Mark" as id_mark,
     d."Error conclusion" as status_resultado,
     d."note" as observacao,
-    d.bancada_id,
-    d.composite_id,
     
     -- 2. Dados Técnicos (Tabela Full Data - Achatamento JSON)
     f.raw_payload as tech_raw,
@@ -42,13 +40,13 @@ SELECT
     cl.lote_inmetro as csv_lote_inmetro,
     cl.data_vinculo as csv_data_vinculo,
 
-    -- 4. Trazer tudo do Data (d.*) para garantir campos dinâmicos não mapeados
+    -- 4. Trazer tudo do Data (d.*) - Já inclui bancada_id e composite_id originais
     d.*
 
 FROM public.data d
--- JOIN Full Data: Cruzamento via ID Mark (Forte)
+-- JOIN Full Data: Cruzamento via ID Mark
 LEFT JOIN public.full_data f ON (UPPER(TRIM(d."ID Mark")) = UPPER(TRIM(f."ID Mark")))
--- JOIN CSV: Cruzamento via Meter Number contra Lote (Padrão Industrial)
+-- JOIN CSV: Cruzamento via Meter Number contra Lote
 LEFT JOIN public.vinculo_lacre cl ON (UPPER(TRIM(d."Meter Number")) = UPPER(TRIM(cl.lote_produto)));
 
 -- 3. Garantir Permissões
