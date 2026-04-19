@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   Save, AlertTriangle, CheckCircle2, Layout, Eye, RefreshCw, 
   ChevronUp, ChevronDown, CheckSquare, Lock, Cpu, ArrowLeft, Search, Database,
-  Settings, Server, Info, Plus, Trash2, Link as LinkIcon
+  Settings, Server, Info, Plus, Trash2, Link as LinkIcon, Activity
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
