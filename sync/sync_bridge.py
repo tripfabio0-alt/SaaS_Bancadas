@@ -102,6 +102,18 @@ def save_state(state: dict):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
 
+
+def get_valid_columns(table_name):
+    try:
+        # Pega um registro vazio apenas para ler os headers
+        res = supabase.table(table_name).select("*").limit(1).execute()
+        if res.data:
+            return set(res.data[0].keys())
+        # Se estiver vazia, tenta inferir ou retorna vazio (o upsert falhará com segurança)
+        return set()
+    except Exception:
+        return set()
+
 def sync_access_file(db_path, bancada_id):
     if not os.path.exists(db_path):
         return
@@ -109,6 +121,9 @@ def sync_access_file(db_path, bancada_id):
     is_full_data_file = "Full Data" in db_path
     target_table = "full_data" if is_full_data_file else "data"
     state_key = f"{bancada_id}_{'full' if is_full_data_file else 'data'}"
+    
+    # 1. Obter colunas válidas no destino
+    valid_cols = get_valid_columns(target_table)
     
     conn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + db_path + ';'
     try:
@@ -119,7 +134,6 @@ def sync_access_file(db_path, bancada_id):
         
         for table_name in tables:
             try:
-                # Filtrar tabelas por ano no Data.accdb se necessário, ou processar tudo
                 if is_full_data_file and table_name.lower() not in ['full data', 'data', 'table1']:
                      continue
                 
@@ -140,6 +154,11 @@ def sync_access_file(db_path, bancada_id):
                 
                 if 'ID Mark' in df.columns:
                     df['composite_id'] = df['bancada_id'].astype(str) + '_' + df['ID Mark'].astype(str)
+                
+                # 2. FILTRAGEM DINÂMICA (SCHEMA-AWARE)
+                if valid_cols:
+                    cols_to_send = [c for c in df.columns if c in valid_cols]
+                    df = df[cols_to_send]
                 
                 # Incremental
                 table_state_key = f"{state_key}_{table_name}"
