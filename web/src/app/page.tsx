@@ -286,6 +286,7 @@ export default function Home() {
       </section>
 
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.02] blueprint-grid" />
+      <div className="fixed bottom-4 left-8 text-[8px] font-black text-text-dim/20 uppercase tracking-[0.3em] pointer-events-none">Infraestrutura SaaS V3.0.0 (Industrial Engine)</div>
     </div>
   );
 }
