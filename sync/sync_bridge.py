@@ -79,13 +79,14 @@ def map_columns(df, is_full_data=False):
         df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
         return df[['ID Mark', 'raw_payload']].copy() if 'ID Mark' in df.columns else df.copy()
     else:
-        # No Data (Main), garantimos apenas os campos de meta-dados necessários
+        # No Data (Main), garantimos que os campos essenciais existem, mas NÃO removemos colunas extras
         required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'note']
         for col in required:
             if col not in df.columns:
                 df[col] = None
         
-        return df[required].copy()
+        return df.copy() # Sincroniza todas as colunas que encontrar no Access
+
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "sync_state.json")
 
