@@ -12,8 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
-  Calendar,
-  Filter
+  Filter,
+  Layers
 } from 'lucide-react';
 
 const PAGE_SIZE = 50;
@@ -24,12 +24,12 @@ export default function Home() {
   const [reportData, setReportData] = useState<any[]>([]);
   const [benches, setBenches] = useState<any[]>([]);
   const [visibleFields, setVisibleFields] = useState<string[]>([]);
+  // PADRÃO: TUDO para visibilidade imediata de todo o histórico (341k registros)
   const [period, setPeriod] = useState<Period>('all');
   const [summary, setSummary] = useState({
     approved: 0,
     rejected: 0,
     onlineCount: 0,
-    totalBenches: 0,
     totalInCloud: 0
   });
   
@@ -49,15 +49,15 @@ export default function Home() {
     'erro_relativo': 'Erro (%)',
     'temperatura_celcius': 'Temp Lab',
     'umidade_percentual': 'Umidade',
-    'wme_value': 'WME',
-    'data_sincronismo': 'Sincronização'
+    'pressao_pa': 'Pressão (Pa)',
+    'data_sincronismo': 'Sincronização Cloud'
   };
 
   const fetchConfigAndCounts = async () => {
     try {
       const { data: config } = await supabase.from('app_config').select('*').eq('id', 1).single();
       
-      // Contagem Total para provar integridade dos 340k
+      // Contagem Total Cloud
       const { count: grandTotal } = await supabase.from('data').select('*', { count: 'exact', head: true });
 
       if (config) {
@@ -81,8 +81,9 @@ export default function Home() {
         setSummary(prev => ({ 
           ...prev, 
           onlineCount: resolvedBenches.filter(b => b.isOnline).length,
-          totalBenches: resolvedBenches.length,
-          totalInCloud: grandTotal || 0
+          totalInCloud: grandTotal || 0,
+          approved: 0, // Será atualizado pelo fetchData do período
+          rejected: 0
         }));
       }
     } catch (e) { console.error(e); }
@@ -97,7 +98,6 @@ export default function Home() {
 
       let query = supabase.from('global_uniao').select('*', { count: 'exact' });
       
-      // FILTRO DE PERÍODO (Hoje, Semana, Mês)
       if (currentPeriod !== 'all') {
         const now = new Date();
         let startDate = new Date();
@@ -108,10 +108,10 @@ export default function Home() {
       }
 
       if (searchTerm) {
-        query = query.or(`meter_number.ilike.%${searchTerm}%,lote_produto.ilike.%${searchTerm}%,lacre.ilike.%${searchTerm}%`);
+        query = query.or(`meter_number.ilike.%${searchTerm}%,lote_produto.ilike.%${searchTerm}%,lacre.ilike.%${searchTerm}%,"ID Mark".ilike.%${searchTerm}%`);
       }
       
-      const { data, count, error } = await query
+      const { data, error } = await query
         .order('data_hora', { ascending: false })
         .range(from, to);
       
@@ -119,10 +119,10 @@ export default function Home() {
         setReportData([]);
       } else {
         setReportData(data);
+        // Atualizar aprovações/reprovações do lote visível
+        const app = data.filter(r => ['Aprovado', 'OK', 'PASSED'].includes(r.status_resultado || '')).length;
+        setSummary(prev => ({ ...prev, approved: app, rejected: data.length - app }));
       }
-      
-      const approved = (data || []).filter(r => ['Aprovado', 'OK'].includes(r.status_resultado)).length;
-      setSummary(prev => ({ ...prev, approved, rejected: (data?.length || 0) - approved }));
 
     } catch (err) {
       console.error(err);
@@ -140,81 +140,82 @@ export default function Home() {
   }, [page]);
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-700 transition-colors">
+    <div className="p-8 space-y-8 animate-in fade-in duration-700">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 shadow-sm border-l-4 border-l-brand-tertiary">
-          <p className="text-[10px] font-black text-brand-tertiary uppercase tracking-widest mb-4">Mestre de Registros</p>
+          <p className="text-[10px] font-black text-brand-tertiary uppercase tracking-widest mb-4 flex items-center gap-2"><Database size={12} /> Unidade Cloud</p>
           <div className="flex items-end justify-between">
             <h2 className="text-4xl font-extrabold text-text-main">{summary.totalInCloud.toLocaleString('pt-BR')}</h2>
-            <Database className="text-brand-tertiary opacity-40" />
+            <Layers className="text-brand-tertiary opacity-20" size={32} />
           </div>
-          <p className="text-[9px] text-text-dim mt-2 uppercase font-bold tracking-tighter">Total Correlacionado na Nuvem</p>
+          <p className="text-[9px] text-text-dim mt-2 uppercase font-bold">Total de Registros no Tabelão</p>
         </div>
         <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 shadow-sm border-l-4 border-l-brand-primary">
-          <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-4">Filtrados ({period})</p>
+          <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-4 flex items-center gap-2"><Filter size={12} /> Visíveis ({period})</p>
           <div className="flex items-end justify-between">
-            <h2 className="text-4xl font-extrabold text-text-main">{summary.approved + summary.rejected}</h2>
-            <Filter className="text-brand-primary opacity-40" />
+            <h2 className="text-4xl font-extrabold text-text-main">{reportData.length}</h2>
+            <ArrowUpRight className="text-brand-primary opacity-20" size={32} />
           </div>
-          <p className="text-[9px] text-text-dim mt-2 uppercase font-bold tracking-tighter">Registros no Período Selecionado</p>
+          <p className="text-[9px] text-text-dim mt-2 uppercase font-bold">Mostrando Lote Atual</p>
         </div>
         <div className="bg-surface-mid p-6 rounded-2xl border border-outline-variant/10 col-span-2 flex justify-between items-center shadow-lg">
-          <div>
-            <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest mb-2">Monitoramento de Nós</p>
-            <h3 className="text-xl font-bold text-text-main uppercase">{summary.onlineCount} de {summary.totalBenches} Bancadas Operantes</h3>
-          </div>
-          <div className="flex -space-x-2">
-            {benches.map((b, i) => (
-              <div key={i} title={b.name} className={cn(
-                "w-11 h-11 rounded-full border-2 border-surface-mid flex items-center justify-center text-[10px] font-black transition-all",
-                b.isOnline ? "bg-brand-tertiary text-black shadow-[0_0_10px_#4ade80]" : "bg-brand-error text-white shadow-[0_0_10px_#f87171]"
-              )}>0{b.id}</div>
-            ))}
+          <div className="flex-1">
+            <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest mb-2">Monitoramento Industrial</p>
+            <h3 className="text-xl font-bold text-text-main uppercase">{summary.onlineCount} Nós Operantes</h3>
+            <div className="flex gap-1.5 mt-3">
+              {benches.map((b) => (
+                <div key={b.id} title={b.name} className={cn(
+                  "w-12 h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-black transition-all border-2",
+                  b.isOnline ? "bg-brand-tertiary/20 border-brand-tertiary text-text-main shadow-[0_0_15px_rgba(74,222,128,0.1)]" : "bg-surface-highest/20 border-outline-variant/30 text-text-dim"
+                )}>
+                  <span>0{b.id}</span>
+                  <div className={cn("w-1.5 h-1.5 rounded-full mt-1", b.isOnline ? "bg-brand-tertiary" : "bg-brand-error")} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       <section className="bg-surface-mid rounded-2xl border border-outline-variant/10 overflow-hidden shadow-2xl flex flex-col">
-        <div className="p-6 bg-surface-highest/10 border-b border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-              <Activity size={20} />
+        <div className="p-6 bg-surface-highest/10 border-b border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-6">
+            <div className="w-12 h-12 bg-brand-primary/10 rounded-2xl flex items-center justify-center text-brand-primary shadow-inner">
+              <Activity size={24} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-text-main font-headline">Painel de Controle de Lotes</h2>
-              <div className="flex items-center gap-4 mt-1">
-                 <div className="flex bg-surface-low p-1 rounded-lg">
-                    {[
-                      { id: 'today', label: 'Hoje' },
-                      { id: 'week', label: '7 Dias' },
-                      { id: 'month', label: '30 Dias' },
-                      { id: 'all', label: 'Tudo' }
-                    ].map(p => (
-                      <button 
-                        key={p.id} onClick={() => { setPeriod(p.id as Period); setPage(0); }}
-                        className={cn(
-                          "px-4 py-1.5 rounded-md text-[10px] font-black uppercase transition-all",
-                          period === p.id ? "bg-brand-primary text-black" : "text-text-dim hover:text-text-main"
-                        )}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                 </div>
+              <h2 className="text-xl font-bold text-text-main font-headline">Gerenciamento Unificado de Lotes</h2>
+              <div className="flex bg-surface-lowest p-1 rounded-xl mt-3 border border-outline-variant/5">
+                {[
+                  { id: 'today', label: 'Hoje' },
+                  { id: 'week', label: '7 Dias' },
+                  { id: 'month', label: '30 Dias' },
+                  { id: 'all', label: 'Tudo' }
+                ].map(p => (
+                  <button 
+                    key={p.id} onClick={() => { setPeriod(p.id as Period); setPage(0); }}
+                    className={cn(
+                      "px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all tracking-widest",
+                      period === p.id ? "bg-brand-primary text-black shadow-md" : "text-text-dim hover:text-text-main hover:bg-surface-highest/10"
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
           
           <div className="flex gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" size={16} />
+            <div className="relative flex-1 md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/40" size={18} />
               <input 
-                type="text" placeholder="Série, Lote ou Lacre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-surface-low border border-outline-variant/10 rounded-xl py-3 pl-12 pr-4 text-xs text-text-main focus:ring-1 focus:ring-brand-primary transition-all"
+                type="text" placeholder="ID Mark, Série, Lote ou Lacre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-surface-lowest border border-outline-variant/10 rounded-2xl py-3.5 pl-12 pr-4 text-xs text-text-main focus:ring-2 focus:ring-brand-primary/20 transition-all outline-none"
               />
             </div>
-            <button onClick={() => fetchData(page, period)} className="bg-surface-highest/20 p-3 rounded-xl hover:bg-surface-highest text-brand-primary transition-all shadow-sm">
-              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <button onClick={() => fetchData(page, period)} className="bg-surface-highest/40 p-3.5 rounded-2xl hover:bg-brand-primary/20 text-brand-primary transition-all shadow-sm border border-outline-variant/5">
+              <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
@@ -222,40 +223,40 @@ export default function Home() {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-surface-highest/10">
+              <tr className="bg-surface-highest/10 border-b border-outline-variant/10">
                 {visibleFields.map(f => (
-                  <th key={f} className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-brand-primary/60 whitespace-nowrap">
+                  <th key={f} className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[#dae2fd] opacity-40 whitespace-nowrap">
                     {FIELD_LABELS[f] || f.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/10">
+            <tbody className="divide-y divide-outline-variant/5">
               {loading ? (
-                <tr><td colSpan={20} className="py-24 text-center text-text-dim italic uppercase tracking-widest text-[10px] font-bold">Abrindo porta de stream industrial...</td></tr>
+                <tr><td colSpan={20} className="py-32 text-center text-text-dim italic font-headline tracking-widest">Estabelecendo Conexão Industrial...</td></tr>
               ) : reportData.length === 0 ? (
-                <tr><td colSpan={20} className="py-12 text-center text-text-dim italic">Sem registros neste período ({period}).</td></tr>
+                <tr><td colSpan={20} className="py-24 text-center text-text-dim italic font-headline underline decoration-brand-error/20">Sem registros detectados na triagem atual.</td></tr>
               ) : reportData.map((row, i) => (
-                <tr key={i} className="hover:bg-surface-highest/5 transition-colors group">
+                <tr key={i} className="hover:bg-surface-highest/5 transition-colors group border-transparent hover:border-brand-primary/10 border-l-4">
                   {visibleFields.map(field => {
                     const value = row[field];
                     if (field === 'status_resultado') {
-                      const isOk = ['Aprovado', 'APROVADO', 'OK'].includes(value);
+                      const isOk = ['Aprovado', 'OK', 'PASSED'].includes(value || '');
                       return (
-                        <td key={field} className="px-8 py-5">
+                        <td key={field} className="px-8 py-6">
                           <span className={cn(
-                            "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight",
-                            isOk ? "bg-brand-tertiary/10 text-brand-tertiary" : "bg-brand-error/10 text-brand-error"
+                            "inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight shadow-sm border",
+                            isOk ? "bg-brand-tertiary/10 text-brand-tertiary border-brand-tertiary/20" : "bg-brand-error/10 text-brand-error border-brand-error/20"
                           )}>
-                             <div className={cn("w-2 h-2 rounded-full", isOk ? "bg-brand-tertiary" : "bg-brand-error")} />
+                             <div className={cn("w-2 h-2 rounded-full", isOk ? "bg-brand-tertiary animate-pulse" : "bg-brand-error")} />
                              {value || 'Pendente'}
                           </span>
                         </td>
                       );
                     }
-                    if (field === 'data_hora') return <td key={field} className="px-8 py-5 text-xs text-text-sub tabular-nums italic font-medium">{formatSafeDate(value, 'yyyy-MM-dd HH:mm:ss')}</td>;
-                    if (field === 'meter_number') return <td key={field} className="px-8 py-5 font-mono text-sm font-bold text-brand-primary">{value || '-'}</td>;
-                    return <td key={field} className="px-8 py-5 text-xs text-text-sub group-hover:text-text-main transition-colors">{value === null || value === undefined ? '-' : String(value)}</td>;
+                    if (field === 'data_hora') return <td key={field} className="px-8 py-6 text-xs text-text-sub tabular-nums font-mono opacity-80">{formatSafeDate(value, 'yyyy-MM-dd HH:mm:ss')}</td>;
+                    if (field === 'meter_number') return <td key={field} className="px-8 py-6 font-mono text-sm font-bold text-brand-primary tracking-tighter">{value || '-'}</td>;
+                    return <td key={field} className="px-8 py-6 text-xs text-text-sub group-hover:text-text-main transition-colors font-medium">{value === null || value === undefined ? '-' : String(value)}</td>;
                   })}
                 </tr>
               ))}
@@ -263,24 +264,28 @@ export default function Home() {
           </table>
         </div>
 
-        <div className="p-6 bg-surface-highest/5 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-bold text-text-dim uppercase tracking-widest">
-           <div className="flex items-center gap-6">
-              <span className="text-brand-tertiary flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-brand-tertiary" /> Stream Ativo</span>
-              <span>Lote Atual: {reportData.length} Registros</span>
+        <div className="p-8 bg-surface-highest/5 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-6">
+           <div className="flex items-center gap-8">
+              <div className="flex items-center gap-2 text-brand-tertiary">
+                <div className="w-2 h-2 rounded-full bg-brand-tertiary shadow-[0_0_8px_#4ade80]" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Banco Sincronizado</span>
+              </div>
+              <span className="text-[10px] font-bold text-text-dim uppercase tracking-widest">{reportData.length} registros no lote visível</span>
            </div>
-           <div className="flex gap-8 items-center">
-              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="hover:text-brand-primary transition-all disabled:opacity-5 flex items-center gap-1">
-                <ChevronLeft size={14} /> Anterior
+           
+           <div className="flex gap-4 items-center">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="p-3 bg-surface-lowest rounded-xl hover:bg-brand-primary/10 transition-all disabled:opacity-10 border border-outline-variant/5">
+                <ChevronLeft size={20} />
               </button>
-              <div className="bg-surface-highest px-4 py-1.5 rounded-lg text-text-main font-black">PAGINA {page + 1}</div>
-              <button disabled={reportData.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="hover:text-brand-primary transition-all disabled:opacity-5 flex items-center gap-1">
-                Próximo <ChevronRight size={14} />
+              <div className="bg-brand-primary/5 px-6 py-2.5 rounded-xl text-brand-primary font-black text-xs border border-brand-primary/10">LOTE {page + 1}</div>
+              <button disabled={reportData.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="p-3 bg-surface-lowest rounded-xl hover:bg-brand-primary/10 transition-all disabled:opacity-10 border border-outline-variant/5">
+                <ChevronRight size={20} />
               </button>
            </div>
         </div>
       </section>
 
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03] blueprint-grid" />
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.02] blueprint-grid" />
     </div>
   );
 }

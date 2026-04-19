@@ -56,22 +56,28 @@ export default function SettingsPage() {
 
   const fetchDynamicFields = async () => {
     try {
-      // Tentar pegar um registro qualquer para descobrir as colunas
-      const { data: sample } = await supabase.from('global_uniao').select('*').limit(1);
+      // Buscar uma amostra maior para garantir detecção de colunas nulas em alguns registros
+      const { data: sample } = await supabase.from('global_uniao').select('*').limit(100);
       
       if (sample && sample.length > 0) {
-        const keys = Object.keys(sample[0]);
-        const mapped = keys.map(k => ({
+        // Unificar todas as chaves únicas presentes na amostra
+        const allKeys = new Set<string>();
+        sample.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
+        
+        const mapped = Array.from(allKeys).map(k => ({
           id: k,
           label: FRIENDLY_LABELS[k]?.label || k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
           group: FRIENDLY_LABELS[k]?.group || (k.startsWith('tech_') || k.includes('payload') ? 'Técnico' : 'DB Interno')
         }));
         setAvailableFields(mapped);
       } else {
-        // Fallback se o banco estiver vazio
+        // Fallback total se a view estiver retornando vazio
         setAvailableFields(Object.entries(FRIENDLY_LABELS).map(([id, info]) => ({ id, ...info })));
       }
-    } catch (e) { console.error("Erro detectando campos:", e); }
+    } catch (e) { 
+      console.error("Erro detectando campos:", e); 
+      setAvailableFields(Object.entries(FRIENDLY_LABELS).map(([id, info]) => ({ id, ...info })));
+    }
   };
 
   const fetchBenchesStatus = async (configs: any[]) => {

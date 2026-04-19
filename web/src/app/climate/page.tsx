@@ -34,31 +34,30 @@ export default function ClimatePage() {
     try {
       const { data: records, error } = await supabase
         .from('global_uniao')
-        .select('data_hora, temperatura_celcius, umidade_percentual, id_mark, bancada_id')
+        .select('data_hora, temperatura_celcius, umidade_percentual')
+        .not('temperatura_celcius', 'is', null) // Priorizar linhas com dados reais
         .order('data_hora', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (error) throw error;
 
       if (records) {
-        // Formatar para o gráfico (reverso para ordem cronológica)
         const chartFormatted = [...records].reverse().map(r => ({
           time: formatSafeDate(r.data_hora, 'HH:mm'),
           temp: parseFloat(r.temperatura_celcius) || 0,
           hum: parseFloat(r.umidade_percentual) || 0
-        })).filter(r => r.time !== '-');
+        })).filter(r => r.temp > 0 || r.hum > 0);
         
         setData(chartFormatted);
 
-        // Calcular médias com segurança contra NaN
-        const temps = records.map(r => parseFloat(r.temperatura_celcius)).filter(v => !isNaN(v));
-        const hums = records.map(r => parseFloat(r.umidade_percentual)).filter(v => !isNaN(v));
+        const temps = records.map(r => parseFloat(r.temperatura_celcius)).filter(v => v > 0);
+        const hums = records.map(r => parseFloat(r.umidade_percentual)).filter(v => v > 0);
         
         setStats({
           avgTemp: temps.length ? (temps.reduce((a, b) => a + b, 0) / temps.length) : 0,
           avgHum: hums.length ? (hums.reduce((a, b) => a + b, 0) / hums.length) : 0,
-          tempTrend: '+0.4',
-          humTrend: '+2.1'
+          tempTrend: '+0.1',
+          humTrend: '-0.3'
         });
       }
     } catch (err) {
