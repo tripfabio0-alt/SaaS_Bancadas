@@ -33,13 +33,10 @@ def map_columns(df, is_full_data=False):
     
     # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data / Unified Labels)
     tech_map = {
-        'ponto_teste': ['Test point', 'Ponto de teste', 'Ponto', 'Point', 'Q'],
-        'vazao_real': ['Flow rate', 'Vazão', 'Vazao', 'Flow'],
-        'erro_relativo': ['Error', 'Erro', 'Erro relativo', 'Relative Error'],
-        'temperatura_celcius': ['Labtemperature', 'Temperature', 'Temperatura', 'Temp', 'T'],
-        'pressao_pa': ['Labpressure', 'Pressure', 'Pressão', 'Pressao', 'P'],
-        'umidade_percentual': ['Humidity', 'Umidade', 'Humidade', 'H', 'RH', 'Umid'],
-        'wme_value': ['WME', 'Weighted Mean Error', 'Erro Medio Ponderado', 'Erro Ponderado'],
+        'qmax': ['Qmax', 'Q-max', 'Vazão Máxima', 'Flow max'],
+        'qmin': ['Qmin', 'Q-min', 'Vazão Mínima', 'Flow min'],
+        'qn': ['Qn', 'Q-nominal', 'Vazão Nominal', 'Nominal flow'],
+        'perda_carga': ['Pres loss value', 'Pressure loss', 'Perda de carga', '∆P', 'Mech pres loss value'],
         'status_tecnico': ['Status', 'Status técnico', 'Tech Status']
     }
 

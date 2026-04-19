@@ -50,6 +50,10 @@ export default function Home() {
     'temperatura_celcius': 'Temp Lab',
     'umidade_percentual': 'Umidade',
     'pressao_pa': 'Pressão (Pa)',
+    'qmax': 'Vazão Máxima (Qmax)',
+    'qmin': 'Vazão Mínima (Qmin)',
+    'qn': 'Vazão Nominal (Qn)',
+    'perda_carga': 'Perda de Carga (∆P)',
     'data_sincronismo': 'Sincronização Cloud'
   };
 
