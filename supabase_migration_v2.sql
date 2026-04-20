@@ -171,3 +171,23 @@ ALTER TABLE vinculo_lacre ADD COLUMN IF NOT EXISTS "LOTE INMETRO" TEXT;
 -- 4. Adição de campo de Mapeamento de Colunas na app_config
 -- Isso permite traduzir os nomes originais acima para nomes amigáveis no frontend.
 ALTER TABLE app_config ADD COLUMN IF NOT EXISTS column_labels JSONB DEFAULT '{}'::jsonb;
+
+-- 5. Reconstrução da Visão Global Unificada (global_uniao)
+-- Usamos seleção explícita para evitar conflitos de nomes (Ex: ID Mark existe em ambas as tabelas)
+DROP VIEW IF EXISTS global_uniao;
+CREATE OR REPLACE VIEW global_uniao AS
+SELECT 
+    d.*, 
+    -- Campos técnicos da full_data
+    fd."Standard flow", fd."Test time", fd."Error", fd."Pressure Loss", 
+    fd."Meter pressure", fd."Meter temperature", fd."Standard volume", 
+    fd."Meter volume", fd."Humidity", fd."Start Time", fd."Finish Time",
+    -- Campos do Relatório CSV
+    vl."LACRE", vl."LOTE PRODUTO", vl."DATA VINCULO", vl."TIPO", 
+    vl."COD. LACRE", vl."SEQ. LOTE", vl."COD. INMETRO", vl."LOTE INMETRO"
+FROM data d
+LEFT JOIN full_data fd ON (d."ID Mark" = fd."ID Mark" AND d.bancada_id = fd.bancada_id)
+LEFT JOIN vinculo_lacre vl ON (d."Meter Number" = vl."LOTE PRODUTO");
+
+GRANT SELECT ON global_uniao TO anon;
+GRANT SELECT ON global_uniao TO authenticated;
