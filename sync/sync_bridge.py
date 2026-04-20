@@ -109,8 +109,12 @@ def sync_access_file(db_path, bancada_id):
                             continue
                     except: pass
 
-                if is_full_data_file and table_name.lower() not in ['full data', 'data', 'table1'] and not is_history_table:
-                     continue
+                if is_full_data_file:
+                    # No arquivo de Full Data, aceitamos qualquer tabela que não seja do sistema
+                    # para garantir que capturamos as curvas técnicas.
+                    pass
+                elif table_name.lower() not in ['data', 'main', 'table1'] and not is_history_table:
+                    continue
                 
                 query = f"SELECT * FROM [{table_name}]"
                 df = pd.read_sql(query, conn)
@@ -167,18 +171,25 @@ def sync_relatorio_csv(csv_path):
 
     print(f"   [CSV] Sincronizando Vinculo de Lacres: {csv_path}...")
     try:
-        # Tentativa de ler o CSV com detecção de cabeçalho (procura pela linha que contém 'LACRE')
-        with open(csv_path, 'r', encoding='latin1') as f:
-            lines = f.readlines()
+        # Pular as linhas de cabeçalho do relatório ZENNER
+        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=5)
+        df.columns = [c.strip().upper().replace(' ', '_') for c in df.columns]
         
-        header_idx = 0
-        for idx, line in enumerate(lines):
-            if 'LACRE' in line.upper():
-                header_idx = idx
-                break
+        # Limpar linhas de separadores (______) que o CSV da Zenner costuma ter
+        df = df[df['LACRE'].notnull()]
+        df = df[~df['LACRE'].astype(str).str.contains('___')]
         
-        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=header_idx)
-        df.columns = [c.strip().upper() for c in df.columns]
+        # Mapeando nomes originais para que o SELECT da View funcione
+        # A View espera: LACRE, LOTE PRODUTO, DATA VINCULO, TIPO, COD. LACRE, SEQ. LOTE, COD. INMETRO, LOTE INMETRO
+        rename_map = {
+            'LOTE_PRODUTO': 'LOTE PRODUTO',
+            'DATA_VINCULO': 'DATA VINCULO',
+            'SEQ._LOTE': 'SEQ. LOTE',
+            'COD._LACRE': 'COD. LACRE',
+            'COD._INMETRO': 'COD. INMETRO',
+            'LOTE_INMETRO': 'LOTE INMETRO'
+        }
+        df = df.rename(columns=rename_map)
         
         if 'LACRE' not in df.columns:
              # Tenta com vírgula se ponto e vírgula falhar
@@ -199,6 +210,9 @@ def sync_relatorio_csv(csv_path):
             supabase.table('vinculo_lacre').upsert(records[i:i+500], on_conflict='LACRE').execute()
         
         print(f"   [CSV] OK: {len(records)} registros vinculados via Supabase.")
+        
+    except Exception as e:
+        print(f"   [!] Erro no CSV: {e}")
 
 def main():
     print("=" * 60)
