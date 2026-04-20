@@ -198,3 +198,11 @@ CREATE INDEX IF NOT EXISTS idx_full_data_id_mark_bancada ON full_data ("ID Mark"
 CREATE INDEX IF NOT EXISTS idx_data_meter_number ON data ("Meter Number");
 CREATE INDEX IF NOT EXISTS idx_vinculo_lacre_lote_produto ON vinculo_lacre ("LOTE PRODUTO");
 CREATE INDEX IF NOT EXISTS idx_data_save_time ON data ("Save time" DESC);
+
+-- 7. Liberação de Acesso (RLS) - Essencial para o Dashboard ler os dados
+ALTER TABLE data DISABLE ROW LEVEL SECURITY;
+ALTER TABLE full_data DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vinculo_lacre DISABLE ROW LEVEL SECURITY;
+
+-- Recarrega o cache do PostgREST
+NOTIFY pgrst, 'reload schema';
