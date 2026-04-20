@@ -74,15 +74,17 @@ def map_columns(df, is_full_data=False):
     if is_full_data:
         # No Full Data, geramos um payload com chaves canônicas + campos originais não mapeados
         df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
-        return df[['ID Mark', 'raw_payload']].copy() if 'ID Mark' in df.columns else df.copy()
+        return df
     else:
-        # No Data (Main), garantimos que os campos essenciais existem, mas NÃO removemos colunas extras
-        required = ['ID Mark', 'Meter Number', 'Error conclusion', 'Save time', 'note']
-        for col in required:
-            if col not in df.columns:
-                df[col] = None
+        # No Data (Main), garantimos que o ID Mark existe para o composite_id
+        if 'ID Mark' not in df.columns:
+            # Tentar encontrar variações do ID Mark se não foi mapeado
+            for variant in ['id_mark', 'idmark', 'mark', 'no', 'id']:
+                if variant in [c.lower() for c in df.columns]:
+                    df = df.rename(columns={c: 'ID Mark' for c in df.columns if c.lower() == variant})
+                    break
         
-        return df.copy() # Sincroniza todas as colunas que encontrar no Access
+        return df.copy() # Sincroniza todas as colunas originais que encontrar no Access
 
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "sync_state.json")
@@ -129,9 +131,24 @@ def sync_access_file(db_path, bancada_id):
         tables = [t.table_name for t in cursor.tables(tableType='TABLE') if not t.table_name.startswith('MSys')]
         state = load_state()
         
+        # Ordenar tabelas (YYMMDD) para priorizar as mais recentes se solicitado
+        # Mas para o Sync inicial de 2 meses, vamos filtrar primeiro.
+        
         for table_name in tables:
             try:
-                if is_full_data_file and table_name.lower() not in ['full data', 'data', 'table1']:
+                # Se for histórico (YYMMDD), verificar se está nos últimos 60 dias para o sync inicial
+                is_history_table = len(table_name) == 6 + 0 and table_name.isdigit() # YYMMDD
+                
+                if is_history_table:
+                    try:
+                        table_date = datetime.strptime(table_name, "%y%m%d")
+                        days_diff = (datetime.now() - table_date).days
+                        if days_diff > 60:
+                            # Por enquanto ignora tabelas antigas (serão processadas depois)
+                            continue
+                    except: pass
+
+                if is_full_data_file and table_name.lower() not in ['full data', 'data', 'table1'] and not is_history_table:
                      continue
                 
                 query = f"SELECT * FROM [{table_name}]"
@@ -189,25 +206,22 @@ def sync_relatorio_csv(csv_path):
         df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=4)
         df.columns = [c.strip() for c in df.columns]
         
-        mapping = {
-            'LACRE': 'lacre',
-            'LOTE PRODUTO': 'lote_produto',
-            'DATA VINCULO': 'data_vinculo',
-            'TIPO': 'tipo',
-            'COD. LACRE': 'cod_lacre',
-            'SEQ. LOTE': 'seq_lote',
-            'COD. INMETRO': 'cod_inmetro',
-            'LOTE INMETRO': 'lote_inmetro'
-        }
-        df = df.rename(columns=mapping)
-        df = df[[c for c in mapping.values() if c in df.columns]]
-        df = df[df['lacre'].notnull()]
+        # Manter nomes originais no Supabase conforme solicitado
+        # Mas garantir as colunas mapeadas se necessário para o composite_id etc
+        # No caso do CSV, o upsert é por 'LACRE'
+        
+        if 'LACRE' not in df.columns:
+             print(f"   [!] Coluna 'LACRE' não encontrada no CSV: {df.columns.tolist()}")
+             return
+
+        df = df[df['LACRE'].notnull()]
+        df = df.where(pd.notnull(df), None)
         
         records = df.to_dict('records')
-        print(f"   [CSV] Preparando {len(records)} lacres para upload...")
+        print(f"   [CSV] Preparando {len(records)} registros com nomes originais para upload...")
         
         for i in range(0, len(records), 500):
-            supabase.table('vinculo_lacre').upsert(records[i:i+500], on_conflict='lacre').execute()
+            supabase.table('vinculo_lacre').upsert(records[i:i+500], on_conflict='LACRE').execute()
             
         print("   [CSV] OK: Sincronização de Lacres concluída.")
         
