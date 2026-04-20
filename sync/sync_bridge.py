@@ -179,15 +179,18 @@ def sync_access_file(db_path, bancada_id):
                 seen_ids = set(state.get(table_state_key, []))
                 
                 if 'ID Mark' in df.columns:
-                    df_new = df[~df['ID Mark'].astype(str).isin(seen_ids)]
-                    if df_new.empty: continue
+                    # Forçamos a sincronização mesmo de IDs já vistos para preencher as novas 160 colunas
+                    # Em uma execução normal, você poderia voltar a usar df_new = df[~df['ID Mark'].isin(seen_ids)]
+                    df_to_sync = df
                     
-                    print(f"   [Bancada {bancada_id}] Sincronizando {len(df_new)} novos registros de '{table_name}'...")
-                    records = df_new.to_dict('records')
+                    if df_to_sync.empty: continue
+                    
+                    print(f"   [Bancada {bancada_id}] Sincronizando/Atualizando {len(df_to_sync)} registros em '{table_name}'...")
+                    records = df_to_sync.to_dict('records')
                     for i in range(0, len(records), 300):
                         supabase.table(target_table).upsert(records[i:i+300], on_conflict='composite_id').execute()
                     
-                    state[table_state_key] = list(seen_ids.union(set(df_new['ID Mark'].astype(str).tolist())))
+                    state[table_state_key] = list(seen_ids.union(set(df['ID Mark'].astype(str).tolist())))
                     save_state(state)
                 
             except Exception as e:
