@@ -21,70 +21,31 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def map_columns(df, is_full_data=False):
-    """Mapeia colunas do Access para o padrão do Supabase com normalização canônica."""
-    # 1. Mapeamento de Meta-dados (Tabela data) - USANDO NOMES EXATOS DO BD ATUAL
-    metadata_map = {
-        'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'No'],
-        'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial', 'Meter Number'],
-        'Error conclusion': ['Final conclusion', 'WME conclusion', 'Final_conclusion', 'WME_conclusion', 'Error conclusion', 'ErrorConclusion', 'Conclusão', 'Resultado'],
-        'Save time': ['Save time', 'SaveTime', 'Data', 'Hora', 'Timestamp'],
-        'note': ['Note', 'Notas', 'Obs', 'Observação', 'Observacao', 'note']
+    """Mapeia apenas os campos essenciais para o composite_id, mantendo todo o resto original."""
+    # Mapeamento mínimo para garantir o funcionamento da chave primária
+    essential_map = {
+        'ID Mark': ['ID Mark', 'ID_Mark', 'IDMark', 'Mark', 'NO', 'ID', 'Id'],
+        'Meter Number': ['Meter Number', 'MeterNumber', 'Medidor', 'Serial'],
+        'Save time': ['Save time', 'SaveTime', 'Data Hora']
     }
     
-    # 2. Mapeamento de Parâmetros Técnicos (Payload Full Data / Unified Labels)
-    tech_map = {
-        'qmax': ['Qmax', 'Q-max', 'Vazão Máxima', 'Flow max'],
-        'qmin': ['Qmin', 'Q-min', 'Vazão Mínima', 'Flow min'],
-        'qn': ['Qn', 'Q-nominal', 'Vazão Nominal', 'Nominal flow'],
-        'perda_carga': ['Pres loss value', 'Pressure loss', 'Perda de carga', '∆P', 'Mech pres loss value'],
-        'status_tecnico': ['Status', 'Status técnico', 'Tech Status']
-    }
-
+    cols_lower = {c.lower(): c for c in df.columns}
     final_mapping = {}
-    cols_map = {col.lower().strip().replace('_', ' ').replace('  ', ' '): col for col in df.columns}
-    
-    # Executar Mapeamento de Metadados
-    for target, variations in metadata_map.items():
-        found = False
-        target_norm = target.lower().replace('_', ' ')
-        if target_norm in cols_map:
-            final_mapping[cols_map[target_norm]] = target
-            found = True
-        
-        if not found:
-            for variant in variations:
-                v_norm = variant.lower().strip().replace('_', ' ')
-                if v_norm in cols_map:
-                    final_mapping[cols_map[v_norm]] = target
-                    found = True
-                    break
-    
-    # Se for Full Data, mapear também os campos técnicos para chaves canônicas no JSON
-    if is_full_data:
-        for target, variations in tech_map.items():
-            for variant in variations:
-                v_norm = variant.lower().strip().replace('_', ' ')
-                if v_norm in cols_map:
-                    final_mapping[cols_map[v_norm]] = target
+
+    for target, variations in essential_map.items():
+        if target.lower() in cols_lower:
+            final_mapping[cols_lower[target.lower()]] = target
+        else:
+            for v in variations:
+                if v.lower() in cols_lower:
+                    final_mapping[cols_lower[v.lower()]] = target
                     break
     
     if final_mapping:
         df = df.rename(columns=final_mapping)
     
-    if is_full_data:
-        # No Full Data, geramos um payload com chaves canônicas + campos originais não mapeados
-        df['raw_payload'] = df.apply(lambda row: row.to_dict(), axis=1)
-        return df
-    else:
-        # No Data (Main), garantimos que o ID Mark existe para o composite_id
-        if 'ID Mark' not in df.columns:
-            # Tentar encontrar variações do ID Mark se não foi mapeado
-            for variant in ['id_mark', 'idmark', 'mark', 'no', 'id']:
-                if variant in [c.lower() for c in df.columns]:
-                    df = df.rename(columns={c: 'ID Mark' for c in df.columns if c.lower() == variant})
-                    break
-        
-        return df.copy() # Sincroniza todas as colunas originais que encontrar no Access
+    # IMPORTANTE: Não removemos nenhuma coluna. Tudo o que vier do Access será enviado.
+    return df
 
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "sync_state.json")
@@ -206,38 +167,38 @@ def sync_relatorio_csv(csv_path):
 
     print(f"   [CSV] Sincronizando Vinculo de Lacres: {csv_path}...")
     try:
-        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=4)
-        df.columns = [c.strip() for c in df.columns]
+        # Tentativa de ler o CSV com detecção de cabeçalho (procura pela linha que contém 'LACRE')
+        with open(csv_path, 'r', encoding='latin1') as f:
+            lines = f.readlines()
         
-        # Manter nomes originais no Supabase conforme solicitado
-        # Mas garantir as colunas mapeadas se necessário para o composite_id etc
-        # No caso do CSV, o upsert é por 'LACRE'
+        header_idx = 0
+        for idx, line in enumerate(lines):
+            if 'LACRE' in line.upper():
+                header_idx = idx
+                break
+        
+        df = pd.read_csv(csv_path, sep=';', encoding='latin1', skiprows=header_idx)
+        df.columns = [c.strip().upper() for c in df.columns]
         
         if 'LACRE' not in df.columns:
-             print(f"   [!] Coluna 'LACRE' não encontrada no CSV: {df.columns.tolist()}")
+             # Tenta com vírgula se ponto e vírgula falhar
+             df = pd.read_csv(csv_path, sep=',', encoding='latin1', skiprows=header_idx)
+             df.columns = [c.strip().upper() for c in df.columns]
+
+        if 'LACRE' not in df.columns:
+             print(f"   [!] Coluna 'LACRE' não encontrada. Colunas detectadas: {df.columns.tolist()}")
              return
 
         df = df[df['LACRE'].notnull()]
         df = df.where(pd.notnull(df), None)
         
         records = df.to_dict('records')
-        print(f"   [CSV] Preparando {len(records)} registros com nomes originais para upload...")
+        print(f"   [CSV] Sincronizando {len(records)} registros comerciais...")
         
         for i in range(0, len(records), 500):
             supabase.table('vinculo_lacre').upsert(records[i:i+500], on_conflict='LACRE').execute()
-            
-        print("   [CSV] OK: Sincronização de Lacres concluída.")
         
-        new_last_sync = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-        supabase.table('app_config').update({
-            "csv_config": {
-                "path": csv_path,
-                "last_sync": new_last_sync
-            }
-        }).eq('id', 1).execute()
-        
-    except Exception as e:
-        print(f"   [!] Erro no CSV: {e}")
+        print(f"   [CSV] OK: {len(records)} registros vinculados via Supabase.")
 
 def main():
     print("=" * 60)
