@@ -191,3 +191,10 @@ LEFT JOIN vinculo_lacre vl ON (d."Meter Number" = vl."LOTE PRODUTO");
 
 GRANT SELECT ON global_uniao TO anon;
 GRANT SELECT ON global_uniao TO authenticated;
+
+-- 6. Índices de Performance para a Visão Global (ESSENCIAL para 400k+ registros)
+CREATE INDEX IF NOT EXISTS idx_data_id_mark_bancada ON data ("ID Mark", bancada_id);
+CREATE INDEX IF NOT EXISTS idx_full_data_id_mark_bancada ON full_data ("ID Mark", bancada_id);
+CREATE INDEX IF NOT EXISTS idx_data_meter_number ON data ("Meter Number");
+CREATE INDEX IF NOT EXISTS idx_vinculo_lacre_lote_produto ON vinculo_lacre ("LOTE PRODUTO");
+CREATE INDEX IF NOT EXISTS idx_data_save_time ON data ("Save time" DESC);
